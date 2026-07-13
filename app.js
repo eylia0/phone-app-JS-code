@@ -31,10 +31,14 @@ document.querySelectorAll('.trade-tile').forEach(tile => {
             const htmlContent = await response.text();
             document.getElementById('trade-file-content').innerHTML = htmlContent;
             
-            // Core initialization calls right after new HTML code template lands
-            setupTaskButtons(); 
-            setupLegalBubbles(); 
+            // 🛠️ CHOOSE WHICH INITIALIZATION INITIALIZER TO RUN:
+            if (fileTarget.includes('electrical.html')) {
+                setupTaskButtons(); 
+            } else if (fileTarget.includes('general.html')) {
+                setupGeneralTaskButtons(); 
+            }
             
+            setupLegalBubbles(); 
             switchPage('page-dynamic-trade-view');
         } catch (err) {
             console.error("Error loading file:", err);
@@ -157,7 +161,7 @@ function setupTaskButtons() {
         document.querySelectorAll('.wall-canvas .canvas-switchbox-node').forEach(n => n.remove());
 
         const wallW = parseFloat(sbWallWidthInput.value) || 500;
-        const targetHeight = parseFloat(sbBoxHeightInput.value) || 30; // Matches power outlets default
+        const targetHeight = parseFloat(sbBoxHeightInput.value) || 30; 
         const startX = parseFloat(sbStartOffsetInput.value) || 60;
         const gapX = parseFloat(sbBoxGapInput.value) || 90;
 
@@ -231,11 +235,18 @@ function setupLegalBubbles() {
                 <li><strong>Power Outlets (General):</strong> Must sit a minimum of 30cm high from the floor line base context.</li>
                 <li><strong>Wet Area Baselines:</strong> Keep boxes at least 60cm horizontally clear from water taps, sinks, or shower basins.</li>
             </ul>
+        `,
+        tape: `
+            <strong>Handyman Construction Math Baselines:</strong>
+            <ul>
+                <li><strong>Area Calculation:</strong> Multiplies Length $\times$ Width. Used on-site to estimate flooring tiles, subfloor sheets, or paint coverage maps.</li>
+                <li><strong>Cubic Volume:</strong> Length $\times$ Width $\times$ Depth. Vital for pouring concrete, mixing mortar, or filling gravel foundations.</li>
+                <li><strong>Circumference:</strong> $2 \times \pi \times R$. Crucial for mapping circular columns, routing custom trim work, or tracking structural round columns.</li>
+            </ul>
         `
     };
 
     if (modalOverlay && closeModalBtn && infoBubbles.length > 0) {
-        // Safe clear and rebuild click event assignments
         infoBubbles.forEach(bubble => {
             const newBubble = bubble.cloneNode(true);
             bubble.parentNode.replaceChild(newBubble, bubble);
@@ -248,7 +259,7 @@ function setupLegalBubbles() {
                 const contentKey = bubble.getAttribute('data-legal');
                 
                 if (legalDatabase[contentKey]) {
-                    modalTitle.innerText = contentKey === 'downlight' ? 'Downlight Placement Codes' : 'Switchbox Elevation Codes';
+                    modalTitle.innerText = contentKey === 'downlight' ? 'Downlight Placement Codes' : contentKey === 'switchbox' ? 'Switchbox Elevation Codes' : 'General Layout Code';
                     modalBody.innerHTML = legalDatabase[contentKey];
                     modalOverlay.classList.remove('hidden');
                 }
@@ -260,4 +271,135 @@ function setupLegalBubbles() {
             if (e.target === modalOverlay) modalOverlay.classList.add('hidden');
         };
     }
+} // <--- THIS CLEANLY CLOSES SETUPLEGALBUBBLES SEPARATELY NOW
+
+// ==========================================================================
+// 5. GENERAL HANDYMAN TRADE FUNCTIONS (STANDALONE AT BOTTOM)
+// ==========================================================================
+let tapePoints = [];
+
+function setupGeneralTaskButtons() {
+    // --- ROUTING ENGINE HUBS ---
+    const genHubMenu = document.getElementById('gen-hub-menu');
+    const tapeWorkspace = document.getElementById('gen-tape-workspace');
+    const calcWorkspace = document.getElementById('gen-calc-workspace');
+    
+    const openTapeBtn = document.getElementById('open-tape-btn');
+    const openCalcBtn = document.getElementById('open-calc-btn');
+    const backToHub1 = document.getElementById('back-to-gen-hub-1');
+    const backToHub2 = document.getElementById('back-to-gen-hub-2');
+
+    if (openTapeBtn && openCalcBtn) {
+        openTapeBtn.onclick = () => {
+            genHubMenu.classList.add('hidden');
+            tapeWorkspace.classList.remove('hidden');
+            resetTapeMeasure();
+        };
+        openCalcBtn.onclick = () => {
+            genHubMenu.classList.add('hidden');
+            calcWorkspace.classList.remove('hidden');
+            runSpatialCalculator();
+        };
+        backToHub1.onclick = () => {
+            tapeWorkspace.classList.add('hidden');
+            genHubMenu.classList.remove('hidden');
+        };
+        backToHub2.onclick = () => {
+            calcWorkspace.classList.add('hidden');
+            genHubMenu.classList.remove('hidden');
+        };
+    }
+
+    // --- SMART TAP-TO-MEASURE LOGIC ENGINE ---
+    const tapeCanvas = document.getElementById('tape-measure-canvas');
+    const tapeStatusText = document.getElementById('tape-status-text');
+    const clearTapeBtn = document.getElementById('clear-tape-btn');
+    const targetVibeInput = document.getElementById('target-vibe-dist');
+
+    if (tapeCanvas) {
+        tapeCanvas.onclick = function (e) {
+            if (tapePoints.length >= 2) return; 
+
+            const rect = tapeCanvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            tapePoints.push({ x: clickX, y: clickY });
+
+            const pin = document.createElement('div');
+            pin.className = 'canvas-tape-pin';
+            pin.style.left = `${(clickX / rect.width) * 100}%`;
+            pin.style.top = `${(clickY / rect.height) * 100}%`;
+            tapeCanvas.appendChild(pin);
+
+            if (tapePoints.length === 1) {
+                tapeStatusText.innerText = "Tap Point 2 to Compute Line";
+            } else if (tapePoints.length === 2) {
+                const dx = tapePoints[1].x - tapePoints[0].x;
+                const dy = tapePoints[1].y - tapePoints[0].y;
+                const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+
+                const calculatedCm = Math.round(pixelDistance * 1.5);
+                tapeStatusText.innerText = `Measured Distance: ${calculatedCm} cm`;
+
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                const line = document.createElement('div');
+                line.className = 'canvas-connecting-line';
+                line.style.width = `${pixelDistance}px`;
+                line.style.left = `${(tapePoints[0].x / rect.width) * 100}%`;
+                line.style.top = `${(tapePoints[0].y / rect.height) * 100}%`;
+                line.style.transform = `rotate(${angle}deg)`;
+                tapeCanvas.appendChild(line);
+
+                // Haptic feedback alert check
+                const targetAlertDistance = parseFloat(targetVibeInput.value) || 150;
+                if (calculatedCm >= targetAlertDistance) {
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200]); 
+                    } else {
+                        console.log("[Haptic Vibration] Proximity limit reached: " + calculatedCm + "cm");
+                    }
+                }
+                
+                sendCommandToArduino(calculatedCm, "Handyman Distance Measurement");
+            }
+        };
+    }
+
+    function resetTapeMeasure() {
+        tapePoints = [];
+        if (tapeCanvas) tapeCanvas.innerHTML = '';
+        if (tapeStatusText) tapeStatusText.innerText = "Tap Point 1 to Begin";
+    }
+    if (clearTapeBtn) clearTapeBtn.onclick = resetTapeMeasure;
+
+    // --- GEOMETRIC FORMULA SPATIAL CALCULATOR LOGIC ---
+    const inpL = document.getElementById('calc-dim-l');
+    const inpW = document.getElementById('calc-dim-w');
+    const inpD = document.getElementById('calc-dim-d');
+
+    const outArea = document.getElementById('out-area');
+    const outVolume = document.getElementById('out-volume');
+    const outSurface = document.getElementById('out-surface');
+    const outCircum = document.getElementById('out-circum');
+
+    function runSpatialCalculator() {
+        const L = parseFloat(inpL.value) || 0;
+        const W = parseFloat(inpW.value) || 0;
+        const D = parseFloat(inpD.value) || 0;
+
+        const flatArea = L * W;
+        const cubicVolume = L * W * D;
+        const surfaceArea = 2 * (L * W + L * D + W * D);
+        const circumferenceCircle = 2 * Math.PI * L; 
+
+        outArea.innerText = `${flatArea.toLocaleString()} cm²`;
+        outVolume.innerText = `${cubicVolume.toLocaleString()} cm³`;
+        outSurface.innerText = `${surfaceArea.toLocaleString()} cm²`;
+        outCircum.innerText = `${Math.round(circumferenceCircle).toLocaleString()} cm`;
+    }
+
+    if (inpL) inpL.oninput = runSpatialCalculator;
+    if (inpW) inpW.oninput = runSpatialCalculator;
+    if (inpD) inpD.oninput = runSpatialCalculator;
 }

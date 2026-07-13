@@ -1,9 +1,124 @@
-<div class="banner electrical-banner">
-    <h3>Electrical Controls</h3>
-    <p>Relay systems and mains metering</p>
+<div id="gen-hub-menu" class="sub-feature-view">
+    <div class="banner general-banner" style="background: linear-gradient(135deg, #16a085, #2c3e50);">
+        <h3>General Handyman Tools</h3>
+        <p>Select a smart measurement or geometric utility</p>
+    </div>
+
+    <div class="feature-menu-list">
+        <div class="feature-menu-item" id="open-tape-btn">
+            <div class="feature-item-icon">📏</div>
+            <div class="feature-item-info">
+                <h5>Smart Tap-to-Measure</h5>
+                <p>Plot two coordinates on screen to calculate real distance with a vibration alert.</p>
+            </div>
+            <div class="feature-item-arrow">➔</div>
+        </div>
+
+        <div class="feature-menu-item" id="open-calc-btn">
+            <div class="feature-item-icon">🧮</div>
+            <div class="feature-item-info">
+                <h5>Geometric Calculator</h5>
+                <p>Instantly evaluate Area, Volume, Surface Area, and Circumference.</p>
+            </div>
+            <div class="feature-item-arrow">➔</div>
+        </div>
+    </div>
 </div>
-<div class="task-vertical-list">
-    <button class="btn btn-task" data-cmd="20">Trigger Main Relay 1</button>
-    <button class="btn btn-task" data-cmd="21">Trigger Aux Relay 2</button>
-    <button class="btn btn-task" data-cmd="22">Read Wire Voltage Level</button>
+
+<div id="gen-tape-workspace" class="sub-feature-view hidden">
+    <div class="banner general-banner" style="background: linear-gradient(135deg, #16a085, #2c3e50);">
+        <div class="banner-with-back">
+            <button id="back-to-gen-hub-1" class="mini-back-btn">‹ Hub</button>
+            <div>
+                <h3>Smart Tap-to-Measure</h3>
+                <p>Tap two spots to measure. Set a target alert distance below.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="electrical-controls">
+        <div class="measurement-matrix-box">
+            <h4>1. Haptic Proximity Target</h4>
+            <div class="form-group">
+                <label>Vibrate Alert Distance Target</label>
+                <div class="unit-input-wrapper">
+                    <input type="number" id="target-vibe-dist" value="150">
+                    <span class="inside-unit">cm</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="matrix-card">
+            <div class="canvas-header-meta">
+                <h4 id="tape-status-text">Tap Point 1 to Begin</h4>
+                <button id="clear-tape-btn" class="clear-btn">Reset</button>
+            </div>
+            <div class="canvas-viewport-wrapper">
+                <div id="tape-measure-canvas" class="blueprint-canvas grid-helper-lines" style="border-color: #16a085; height: 260px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="gen-calc-workspace" class="sub-feature-view hidden">
+    <div class="banner general-banner" style="background: linear-gradient(135deg, #16a085, #2c3e50);">
+        <div class="banner-with-back">
+            <button id="back-to-gen-hub-2" class="mini-back-btn">‹ Hub</button>
+            <div>
+                <h3>Geometric Spatial Calculator</h3>
+                <p>Input basic job margins to compute advanced calculations instantly.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="electrical-controls">
+        <div class="measurement-matrix-box">
+            <h4>1. Base Dimensions Input</h4>
+            <div class="input-split-row">
+                <div class="form-group">
+                    <label>Length / Radius (R)</label>
+                    <div class="unit-input-wrapper">
+                        <input type="number" id="calc-dim-l" value="100">
+                        <span class="inside-unit">cm</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Width / Height (H)</label>
+                    <div class="unit-input-wrapper">
+                        <input type="number" id="calc-dim-w" value="50">
+                        <span class="inside-unit">cm</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 12px;">
+                <label>Depth / Thickness (For Volume)</label>
+                <div class="unit-input-wrapper">
+                    <input type="number" id="calc-dim-d" value="20">
+                    <span class="inside-unit">cm</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="matrix-card">
+            <h4 style="font-size: 0.9rem; text-transform: uppercase; color: #475569; margin-bottom: 12px;">Calculation Log Output</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem; color: #1e293b;">
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Flat Area:</td>
+                    <td id="out-area" style="text-align: right; font-weight: 700; color: #16a085;">0 cm²</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Total Volume:</td>
+                    <td id="out-volume" style="text-align: right; font-weight: 700; color: #16a085;">0 cm³</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e2e8f0;">
+                    <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Surface Area:</td>
+                    <td id="out-surface" style="text-align: right; font-weight: 700; color: #16a085;">0 cm²</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Circumference (Circle R):</td>
+                    <td id="out-circum" style="text-align: right; font-weight: 700; color: #16a085;">0 cm</td>
+                </tr>
+            </table>
+        </div>
+    </div>
 </div>
