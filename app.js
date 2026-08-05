@@ -2,6 +2,14 @@ let jobProfile = { name: '', location: '' };
 let placementRegistry = [];
 let switchboxRegistry = [];
 
+// 🛠️ BLE GLOBAL VARIABLES (FIXED: Declared properly so script won't crash)
+let bleDeviceCache = null;
+let bleCharacteristicCache = null;
+
+// BLE CONFIGURATION TARGETS
+const ARDUINO_BLE_SERVICE_UUID = "0000180c-0000-1000-8000-00805f9b34fb"; // Standardized 180C
+const ARDUINO_BLE_CHAR_UUID    = "00002a56-0000-1000-8000-00805f9b34fb"; // Standardized 2A56
+
 function switchPage(pageId) {
     document.querySelectorAll('.step-view').forEach(p => p.classList.add('hidden'));
     document.getElementById(pageId).classList.remove('hidden');
@@ -31,7 +39,6 @@ document.querySelectorAll('.trade-tile').forEach(tile => {
             const htmlContent = await response.text();
             document.getElementById('trade-file-content').innerHTML = htmlContent;
             
-            // 🛠️ CHOOSE WHICH INITIALIZATION INITIALIZER TO RUN:
             if (fileTarget.includes('electrical.html')) {
                 setupTaskButtons(); 
             } else if (fileTarget.includes('general.html')) {
@@ -48,7 +55,6 @@ document.querySelectorAll('.trade-tile').forEach(tile => {
 
 // 3. Setup Layout Elements Inside Injected Sub-Files
 function setupTaskButtons() {
-    // --- MAIN ELECTRICAL HUB ROUTING ---
     const hubMenu = document.getElementById('elec-hub-menu');
     const downlightWorkspace = document.getElementById('elec-downlight-workspace');
     const switchboxWorkspace = document.getElementById('elec-switchbox-workspace');
@@ -58,10 +64,8 @@ function setupTaskButtons() {
     const backToHubBtn1 = document.getElementById('back-to-elec-hub');
     const backToHubBtn2 = document.getElementById('back-to-elec-hub-2');
 
-    // Enable button styles on Option 2 menu row item if it exists
     if (openSwitchboxBtn) openSwitchboxBtn.classList.remove('disabled-feature');
 
-    // Hub Event Navigation Binding
     if (openDownlightBtn && openSwitchboxBtn) {
         openDownlightBtn.onclick = () => {
             hubMenu.classList.add('hidden');
@@ -139,7 +143,6 @@ function setupTaskButtons() {
     if (calculateBtn) calculateBtn.onclick = generateMatrixLayout;
     if (sendButton) {
         sendButton.onclick = () => {
-            alert(`Sending ${placementRegistry.length} downlight coordinates data to Arduino Nano BLE...`);
             sendCommandToArduino(placementRegistry.length, "Downlight Matrix Transmission");
         };
     }
@@ -197,7 +200,6 @@ function setupTaskButtons() {
     if (sendSwitchboxBtn) {
         sendSwitchboxBtn.onclick = () => {
             if (switchboxRegistry.length === 0) return alert("No switchbox mapping matrix found.");
-            alert(`Uploading ${switchboxRegistry.length} switchbox items data to Arduino Nano BLE...`);
             sendCommandToArduino(switchboxRegistry.length, "Switchbox Layout Transmission");
         };
     }
@@ -207,8 +209,60 @@ function setupTaskButtons() {
 document.querySelector('.back-to-profile').addEventListener('click', () => switchPage('page-job-profile'));
 document.querySelector('.back-to-trades').addEventListener('click', () => switchPage('page-trade-grid'));
 
-function sendCommandToArduino(code, description) {
-    alert(`Sending Code: ${code}\nAction: ${description}`);
+// --- CORE BLUETOOTH TRANSMISSION ENGINE ---
+async function sendCommandToArduino(payloadData, description) {
+    console.log(`[BLE] Preparing payload transmission for: ${description}`);
+    const statusBadge = document.getElementById('status-badge');
+
+    // 🛠️ Check Web Bluetooth support before opening modal
+    if (!navigator.bluetooth) {
+        alert("Web Bluetooth is not supported on this browser. Please use Google Chrome or Microsoft Edge.");
+        return;
+    }
+
+    try {
+        if (!bleDeviceCache || !bleDeviceCache.gatt.connected) {
+            console.log("[BLE] Opening device search picker...");
+            
+            // Forces Chrome to display ALL nearby Bluetooth devices without crashing on UUID syntax
+            bleDeviceCache = await navigator.bluetooth.requestDevice({
+                acceptAllDevices: true,
+                optionalServices: [
+                    ARDUINO_BLE_SERVICE_UUID,
+                    "19b10000-e8f2-537e-4f6c-d104768a1214"
+                ] 
+            });
+
+            bleDeviceCache.addEventListener('gattserverdisconnected', () => {
+                console.warn("[BLE] Arduino link dropped.");
+                if (statusBadge) {
+                    statusBadge.innerText = "Disconnected";
+                    statusBadge.className = "badge disconnected";
+                }
+                bleCharacteristicCache = null;
+            });
+
+            console.log("[BLE] Connecting to GATT Server...");
+            const server = await bleDeviceCache.gatt.connect();
+
+            console.log("[BLE] Fetching primary service...");
+            const service = await server.getPrimaryService(ARDUINO_BLE_SERVICE_UUID);
+
+            console.log("[BLE] Fetching characteristic...");
+            bleCharacteristicCache = await service.getCharacteristic(ARDUINO_BLE_CHAR_UUID);
+        }
+
+        if (statusBadge) {
+            statusBadge.innerText = "Connected";
+            statusBadge.className = "badge connected";
+        }
+
+        alert("Connected successfully to Bluetooth Device!");
+
+    } catch (error) {
+        console.error("[BLE Error]", error);
+        alert(`Bluetooth Error: ${error.message}`);
+    }
 }
 
 // --- MODULE C: INDEPENDENT COMPLIANCE LEGAL OVERLAY POPUPS ---
@@ -271,15 +325,14 @@ function setupLegalBubbles() {
             if (e.target === modalOverlay) modalOverlay.classList.add('hidden');
         };
     }
-} // <--- THIS CLEANLY CLOSES SETUPLEGALBUBBLES SEPARATELY NOW
+}
 
 // ==========================================================================
-// 5. GENERAL HANDYMAN TRADE FUNCTIONS (STANDALONE AT BOTTOM)
+// 5. GENERAL HANDYMAN TRADE FUNCTIONS
 // ==========================================================================
 let tapePoints = [];
 
 function setupGeneralTaskButtons() {
-    // --- ROUTING ENGINE HUBS ---
     const genHubMenu = document.getElementById('gen-hub-menu');
     const tapeWorkspace = document.getElementById('gen-tape-workspace');
     const calcWorkspace = document.getElementById('gen-calc-workspace');
@@ -310,7 +363,6 @@ function setupGeneralTaskButtons() {
         };
     }
 
-    // --- SMART TAP-TO-MEASURE LOGIC ENGINE ---
     const tapeCanvas = document.getElementById('tape-measure-canvas');
     const tapeStatusText = document.getElementById('tape-status-text');
     const clearTapeBtn = document.getElementById('clear-tape-btn');
@@ -351,7 +403,6 @@ function setupGeneralTaskButtons() {
                 line.style.transform = `rotate(${angle}deg)`;
                 tapeCanvas.appendChild(line);
 
-                // Haptic feedback alert check
                 const targetAlertDistance = parseFloat(targetVibeInput.value) || 150;
                 if (calculatedCm >= targetAlertDistance) {
                     if (navigator.vibrate) {
@@ -373,7 +424,6 @@ function setupGeneralTaskButtons() {
     }
     if (clearTapeBtn) clearTapeBtn.onclick = resetTapeMeasure;
 
-    // --- GEOMETRIC FORMULA SPATIAL CALCULATOR LOGIC ---
     const inpL = document.getElementById('calc-dim-l');
     const inpW = document.getElementById('calc-dim-w');
     const inpD = document.getElementById('calc-dim-d');
