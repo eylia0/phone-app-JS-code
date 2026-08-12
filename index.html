@@ -2,78 +2,189 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Control Multi-File</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TradeLink BLE Controller</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="app-container" style="position: relative;">
+    <div class="app-container">
+        <!-- HEADER BAR -->
+        <!-- HEADER BAR WITH CLICKABLE CONNECTION BADGE -->
         <header class="app-header">
             <div class="header-main">
                 <h2>TradeLink BLE</h2>
-                <span id="status-badge" class="badge disconnected">Disconnected</span>
+                <span id="status-badge" class="badge disconnected" style="cursor: pointer;" title="Click to Connect Bluetooth">Disconnected</span>
             </div>
         </header>
 
         <main class="content-viewport">
             
-            <section id="page-job-profile" class="step-view">
-                <div class="banner">
-                    <h3>Job Details</h3>
-                    <p>Create a profile to begin configuring the Arduino.</p>
+            <!-- SCREEN 8: SPLASH VIEW -->
+            <section id="page-splash" class="step-view">
+                <div class="splash-container">
+                    <h1 class="splash-logo">TradeLink BLE</h1>
+                    <div class="loading-spinner"></div>
                 </div>
-                <div class="form-group">
-                    <label>Job Name</label>
-                    <input type="text" id="job-name" placeholder="e.g., Commercial Office Refit">
-                </div>
-                <div class="form-group">
-                    <label>Location / Unit</label>
-                    <input type="text" id="job-location" placeholder="e.g., Level 4, Room 402">
-                </div>
-                <button id="save-profile-btn" class="btn btn-primary">Next: Select Trade</button>
             </section>
 
-            <section id="page-trade-grid" class="step-view hidden">
-                <div class="banner">
-                    <h3 id="active-profile-title">Project Profile</h3>
-                    <p id="active-profile-meta">Location: Loading...</p>
-                </div>
-                <h4 class="section-title">Select a Trade Category</h4>
-                
-                <div class="trade-grid">
-                    <div class="trade-tile hero-tile" data-file="trades/general.html">
-                        <div class="tile-icon">🛠️</div>
-                        <div class="tile-name">General Trade</div>
-                    </div>
-                    <div class="trade-tile" data-file="trades/electrical.html">
-                        <div class="tile-icon">⚡</div>
-                        <div class="tile-name">Electrical</div>
-                    </div>
-                    <div class="trade-tile" data-file="trades/plumbing.html">
-                        <div class="tile-icon">💧</div>
-                        <div class="tile-name">Plumbing</div>
-                    </div>
-                </div>
-                <button class="btn btn-secondary-outline back-to-profile">‹ Edit Job Details</button>
-            </section>
+            <!-- SCREEN 0 & SCREEN 1: ONBOARDING & PROFILE MANAGER SETUP -->
+<!-- SCREEN 0: ONBOARDING WITH LOCAL SITE HISTORY -->
+<section id="page-onboarding" class="step-view">
+    <div class="onboarding-wrapper">
+        
+        <div class="welcome-hero">
+            <h1>Get Started</h1>
+            <p>Select your operational mode to continue</p>
+        </div>
 
+        <!-- SEGMENTED ROLE CONTROLLER -->
+        <div class="role-segmented-control">
+            <button class="role-tab active" data-tab="tab-linked">Linked Code</button>
+            <button class="role-tab" data-tab="tab-user">Site Worker</button>
+            <button class="role-tab" data-tab="tab-manager">Manager</button>
+        </div>
+
+        <!-- TAB CONTENT 1: LINKED CODE MODE -->
+        <div id="tab-linked" class="mode-card role-panel">
+            <div class="mode-card-header">
+                <div class="mode-icon-bubble">🔗</div>
+                <div class="mode-title-meta">
+                    <h3>Connect to Site</h3>
+                    <p>Enter your employer's site linking code</p>
+                </div>
+            </div>
+
+            <div class="cyan-code-box">
+                <input type="text" id="site-linking-code" placeholder="e.g. A8X922" maxlength="8">
+                <button id="btn-submit-code" class="btn btn-cyan" style="width: auto; padding: 10px 14px;">Sync</button>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 2: SITE WORKER (NO CODE / INDEPENDENT SITE DETAILS) -->
+        <div id="tab-user" class="mode-card role-panel hidden">
+            <div class="mode-card-header">
+                <div class="mode-icon-bubble">🛠️</div>
+                <div class="mode-title-meta">
+                    <h3>Site Worker</h3>
+                    <p>Enter job details for standalone sites</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Job / Site Name</label>
+                <input type="text" id="user-job-name" placeholder="e.g., Parramatta Kitchen Refit">
+            </div>
+            <div class="form-group">
+                <label>Location / Address</label>
+                <input type="text" id="user-job-location" placeholder="e.g., 88 Quarry Rd, Parramatta">
+            </div>
+            <button id="btn-save-user-site" class="btn btn-cyan">Enter Site Workspace ›</button>
+
+            <!-- PREVIOUSLY ENTERED SITES HISTORY LIST -->
+            <div class="history-sites-container">
+                <div class="history-title-row">
+                    <label>Saved Previous Sites</label>
+                    <button id="btn-clear-history" class="text-action-link">Clear All</button>
+                </div>
+                <div id="previous-sites-list" class="history-list-box">
+                    <p class="empty-history-text">No previous sites saved yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 3: MANAGER MODE -->
+        <div id="tab-manager" class="mode-card role-panel hidden">
+            <div class="mode-card-header">
+                <div class="mode-icon-bubble">📊</div>
+                <div class="mode-title-meta">
+                    <h3>Site Manager</h3>
+                    <p>Configure a new job workspace</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Site Name</label>
+                <input type="text" id="job-name" placeholder="Commercial Refit">
+            </div>
+            <div class="form-group">
+                <label>Location / Unit</label>
+                <input type="text" id="job-location" placeholder="Level 4, Room 402">
+            </div>
+            <button id="save-profile-btn" class="btn btn-cyan">Create Site Profile ›</button>
+        </div>
+
+    </div>
+</section>
+
+<!-- SCREEN 2: TRADE SELECTOR GRID -->
+<section id="page-trade-grid" class="step-view hidden">
+    <!-- Active Site Banner Card -->
+    <div class="site-header-card">
+        <div class="site-badge-tag">Active Site</div>
+        <h3 id="active-profile-title">Joe's Site</h3>
+        <p id="active-profile-meta">88 Quarry Road, Parramatta NSW 2150</p>
+    </div>
+
+    <h4 class="section-title">Select a Trade Category</h4>
+    
+    <div class="trade-grid">
+        <div class="trade-tile hero-tile" data-file="trades/general.html">
+            <div class="tile-icon">🛠️</div>
+            <div class="tile-name">General Trade</div>
+        </div>
+        <div class="trade-tile" data-file="trades/electrical.html">
+            <div class="tile-icon">⚡</div>
+            <div class="tile-name">Electrical</div>
+        </div>
+        <div class="trade-tile" data-file="trades/plumbing.html">
+            <div class="tile-icon">💧</div>
+            <div class="tile-name">Plumbing</div>
+        </div>
+    </div>
+
+    <button class="btn btn-secondary-outline back-to-profile">‹ Edit Job Details</button>
+
+    <!-- Simplistic Site Notes Area -->
+   <!-- SIMPLISTIC SITE NOTES AREA WITH SAVE ACTION -->
+    <!-- SERVICENOW STYLE ACTIVITY STREAM NOTES -->
+    <div class="notes-card-box">
+        <div class="notes-header-row">
+            <label>Work Notes & Activity Stream</label>
+            <span id="notes-saved-status" class="notes-status-text">Posted!</span>
+        </div>
+
+        <!-- Input Composer Area -->
+        <div class="servicenow-composer">
+            <textarea id="site-notes-input" placeholder="Add a work note..." rows="2"></textarea>
+            <button id="btn-save-notes" class="btn btn-cyan" style="padding: 10px 16px;">Post Note</button>
+        </div>
+
+        <!-- Activity Stream Output -->
+        <div id="activity-stream-list" class="activity-stream">
+            <!-- Posted notes will dynamically appear here -->
+        </div>
+    </div>
+</section>
+
+            <!-- PAGE 2: DYNAMIC TRADE SUB-VIEW CONTENT -->
             <section id="page-dynamic-trade-view" class="step-view hidden">
                 <div id="trade-file-content"></div>
-                <button class="btn btn-secondary-outline back-to-trades">‹ Back to Trades</button>
             </section>
 
         </main>
 
+        <!-- LEGAL COMPLIANCE OVERLAY MODAL -->
         <div id="legal-modal-overlay" class="modal-overlay hidden">
             <div class="modal-card">
-                <h3 id="modal-legal-title">National Electrical Code</h3>
-                <div id="modal-legal-body" class="modal-body-content">
-                    </div>
-                <button id="close-legal-modal-btn" class="btn btn-primary" style="margin-top: 20px; padding: 10px;">Dismiss & Close</button>
+                <h3 id="modal-legal-title">Building Code Compliance</h3>
+                <div id="modal-legal-body" class="modal-body-content"></div>
+                <button id="close-legal-modal-btn" class="btn btn-cyan" style="margin-top: 16px;">Dismiss & Close</button>
             </div>
         </div>
 
-    </div> <script src="app.js" type="module"></script>
+    </div> 
+
+    <script src="app.js" type="module"></script>
 </body>
 </html>
