@@ -1,111 +1,139 @@
-<!-- SCREEN 4: ELECTRICAL FEATURES HUB -->
+<!-- ELECTRICAL FEATURES HUB -->
 <div id="elec-hub-menu">
-    <div class="workspace-header-bar">
-        <button id="btn-back-to-categories" class="btn-icon-back">‹ Categories</button>
-        <div class="workspace-title-meta">
-            <h2>Electrical Features</h2>
-            <p>Select an installation or planning module</p>
-        </div>
-    </div>
+    <header class="page-header">
+        <button id="btn-back-to-categories" class="icon-btn" data-go="page-trade-grid" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Electrical</h1>
+        <span class="icon-btn-spacer"></span>
+    </header>
+    <p class="muted page-sub">Select an installation or planning module.</p>
 
-    <div class="mode-card-list" style="margin-top: 16px;">
-        <!-- Module Option 1: Downlight Matrix -->
+    <div class="mode-card-list">
         <div id="open-downlight-btn" class="feature-option-card">
             <div class="feature-icon-bubble">💡</div>
             <div class="feature-meta">
-                <h3>Downlight Planning <span class="info-bubble" data-legal="downlight">ⓘ</span></h3>
-                <p>Configure automated grid patterns with custom wall offsets.</p>
+                <h3>Place Lights <span class="info-bubble" data-legal="downlight">i</span></h3>
+                <p>Lay out downlights by room size and spacing, then send to your Sidekick.</p>
             </div>
-            <span class="feature-arrow">›</span>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>
         </div>
 
-        <!-- Module Option 2: Switchbox Layout -->
         <div id="open-switchbox-btn-row" class="feature-option-card">
             <div class="feature-icon-bubble">🔌</div>
             <div class="feature-meta">
-                <h3>Switchbox & Outlet Layout <span class="info-bubble" data-legal="switchbox">ⓘ</span></h3>
+                <h3>Switchbox &amp; Outlets <span class="info-bubble" data-legal="switchbox">i</span></h3>
                 <p>Auto-align boxes across a wall at a uniform height from floor.</p>
             </div>
-            <span class="feature-arrow">›</span>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>
         </div>
     </div>
 </div>
 
-<!-- SCREEN 6: DOWNLIGHT PLANNING MATRIX WORKSPACE (UNIFIED SINGLE CONTAINER) -->
+<!-- PLACE LIGHTS (DOWNLIGHT WIZARD) -->
 <div id="elec-downlight-workspace" class="hidden">
-    <div class="workspace-header-bar">
-        <button id="back-to-elec-hub" class="btn-icon-back">‹ Hub</button>
-        <div class="workspace-title-meta">
-            <h2>Downlight Matrix</h2>
-            <p>Set wall offsets and light gaps</p>
+    <header class="page-header">
+        <button id="back-to-elec-hub" class="icon-btn" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Place Lights</h1>
+        <button class="icon-btn info-bubble" data-legal="downlight" aria-label="Compliance info">i</button>
+    </header>
+
+    <div class="stepper" id="dl-stepper">
+        <button class="step active" data-step="1"><span class="step-num">1</span><span class="step-label">Room</span></button>
+        <span class="step-line"></span>
+        <button class="step" data-step="2"><span class="step-num">2</span><span class="step-label">Spacing</span></button>
+        <span class="step-line"></span>
+        <button class="step" data-step="3"><span class="step-num">3</span><span class="step-label">Send</span></button>
+    </div>
+
+    <div class="plan-view">
+        <div class="dim-top"><span id="dim-w-label">4.8 m</span></div>
+        <div class="plan-row">
+            <div class="blueprint-canvas-wrapper">
+                <div id="ceiling-blueprint-canvas" class="blueprint-canvas"></div>
+            </div>
+            <div class="dim-side"><span id="dim-l-label">3.6 m</span></div>
         </div>
     </div>
 
-    <!-- UNIFIED SINGLE CARD FOR BOTH INPUTS AND BLUEPRINT CANVAS -->
-    <div class="mode-card" style="margin-top: 12px;">
-        <!-- 1. INPUT PARAMETERS SECTION -->
-        <h4 class="form-section-label">1. Room Dimensions & Wall Offsets (cm)</h4>
-        <div class="dual-input-grid">
-            <div class="form-group">
-                <label>Room Width</label>
-                <input type="number" id="room-width-input" value="400" min="50">
+    <!-- STEP 1: ROOM -->
+    <div class="step-panel" data-panel="1">
+        <div class="card param-card">
+            <span class="param-icon"><svg><use href="#i-resize"/></svg></span>
+            <div class="param-body">
+                <label>Room Size</label>
+                <div class="dim-inputs">
+                    <div class="unit-field"><input type="number" id="room-width-input" value="4.8" min="0.5" step="0.1" inputmode="decimal"><span>m</span></div>
+                    <span class="times">×</span>
+                    <div class="unit-field"><input type="number" id="room-length-input" value="3.6" min="0.5" step="0.1" inputmode="decimal"><span>m</span></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Room Length</label>
-                <input type="number" id="room-length-input" value="300" min="50">
+        </div>
+        <button class="btn btn-primary" data-step-go="2">Next: Spacing <svg><use href="#i-chevron-right"/></svg></button>
+    </div>
+
+    <!-- STEP 2: SPACING -->
+    <div class="step-panel hidden" data-panel="2">
+        <div class="card param-card">
+            <span class="param-icon"><svg><use href="#i-dots"/></svg></span>
+            <div class="param-body">
+                <label>Light Spacing</label>
+                <div class="unit-field"><input type="number" id="light-spacing-input" value="1.2" min="0.2" step="0.1" inputmode="decimal"><span>m</span></div>
             </div>
-            <div class="form-group">
-                <label>Offset Horizontal</label>
-                <input type="number" id="wall-offset-x" value="50" min="10">
-            </div>
-            <div class="form-group">
-                <label>Offset Vertical</label>
-                <input type="number" id="wall-offset-y" value="50" min="10">
+            <div class="est-box">
+                <small>Est. lights</small>
+                <strong id="est-lights">0</strong>
             </div>
         </div>
 
-        <h4 class="form-section-label" style="margin-top: 14px;">2. Light Spacing Gaps (cm)</h4>
-        <div class="dual-input-grid">
-            <div class="form-group">
-                <label>Horizontal</label>
-                <input type="number" id="light-gap-x" value="100" min="20">
+        <details class="card advanced-box">
+            <summary>Advanced: wall offsets &amp; separate gaps</summary>
+            <div class="dual-input-grid">
+                <div class="form-group">
+                    <label>Wall Offset X</label>
+                    <div class="unit-field"><input type="number" id="wall-offset-x" placeholder="auto" min="0.1" step="0.05"><span>m</span></div>
+                </div>
+                <div class="form-group">
+                    <label>Wall Offset Y</label>
+                    <div class="unit-field"><input type="number" id="wall-offset-y" placeholder="auto" min="0.1" step="0.05"><span>m</span></div>
+                </div>
+                <div class="form-group">
+                    <label>Gap X</label>
+                    <div class="unit-field"><input type="number" id="light-gap-x" placeholder="= spacing" min="0.2" step="0.1"><span>m</span></div>
+                </div>
+                <div class="form-group">
+                    <label>Gap Y</label>
+                    <div class="unit-field"><input type="number" id="light-gap-y" placeholder="= spacing" min="0.2" step="0.1"><span>m</span></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Vertical</label>
-                <input type="number" id="light-gap-y" value="100" min="20">
+            <span class="subtle-hint">Offsets default to half the spacing from each wall.</span>
+        </details>
+
+        <button id="calculate-blueprint-btn" class="btn btn-primary"><svg><use href="#i-code"/></svg> Create Layout <svg><use href="#i-chevron-right"/></svg></button>
+    </div>
+
+    <!-- STEP 3: SEND -->
+    <div class="step-panel hidden" data-panel="3">
+        <div class="card param-card">
+            <span class="param-icon">💡</span>
+            <div class="param-body">
+                <label id="fixture-counter-title">Downlights: 0</label>
+                <span class="subtle-hint">Tap a light on the plan to remove it.</span>
             </div>
         </div>
-
-        <button id="calculate-blueprint-btn" class="btn btn-cyan" style="margin-top: 12px; margin-bottom: 20px;">Map Layout</button>
-
-        <hr style="border: 0; border-top: 1px dashed var(--border-subtle); margin: 16px 0;">
-
-        <!-- 2. BLUEPRINT CANVAS SECTION (SAME CONTAINER) -->
-        <div class="canvas-header-row">
-            <h4 id="fixture-counter-title" class="section-title" style="margin-bottom:0;">Downlight Generated: 0</h4>
-            
-        </div>
-
-        <div class="blueprint-canvas-wrapper" style="margin-top: 8px;">
-            <div id="ceiling-blueprint-canvas" class="blueprint-canvas"></div>
-        </div>
-        <span class="subtle-hint">Tap a light node to remove it</span>
-        <button id="send-matrix-btn" class="btn btn-cyan" style="margin-top: 14px;">Send Layout to site</button>
+        <button id="send-matrix-btn" class="btn btn-primary">Send to Sidekick <svg><use href="#i-chevron-right"/></svg></button>
+        <button class="btn btn-ghost" data-step-go="2">Edit Spacing</button>
     </div>
 </div>
 
-<!-- MODULE B: SWITCHBOX WORKSPACE (UNIFIED SINGLE CONTAINER) -->
+<!-- SWITCHBOX WORKSPACE -->
 <div id="elec-switchbox-workspace" class="hidden">
-    <div class="workspace-header-bar">
-        <button id="back-to-elec-hub-2" class="btn-icon-back">‹ Hub</button>
-        <div class="workspace-title-meta">
-            <h2>Switchbox Elevation</h2>
-            <p>Wall box alignment and elevation</p>
-        </div>
-    </div>
+    <header class="page-header">
+        <button id="back-to-elec-hub-2" class="icon-btn" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Switchbox Layout</h1>
+        <button class="icon-btn info-bubble" data-legal="switchbox" aria-label="Compliance info">i</button>
+    </header>
 
-    <div class="mode-card" style="margin-top: 12px;">
-        <h4 class="form-section-label">Wall & Elevation Parameters (cm)</h4>
+    <div class="card stack">
+        <h4 class="form-section-label">Wall &amp; Elevation Parameters (cm)</h4>
         <div class="dual-input-grid">
             <div class="form-group">
                 <label>Wall Width</label>
@@ -124,14 +152,12 @@
                 <input type="number" id="sb-box-gap" value="90">
             </div>
         </div>
-        <button id="calculate-switchbox-btn" class="btn btn-cyan" style="margin-top: 12px; margin-bottom: 20px;">Generate Wall Elevation</button>
-
-        <hr style="border: 0; border-top: 1px dashed var(--border-subtle); margin: 16px 0;">
+        <button id="calculate-switchbox-btn" class="btn btn-ghost">Generate Wall Elevation</button>
 
         <h4 id="sb-counter-title" class="section-title">Boxes Generated: 0</h4>
-        <div class="blueprint-canvas-wrapper" style="margin-top: 8px;">
+        <div class="blueprint-canvas-wrapper">
             <div id="wall-blueprint-canvas" class="wall-canvas"></div>
         </div>
-        <button id="send-switchbox-btn" class="btn btn-cyan" style="margin-top: 14px;">⚡ Send Elevation to Arduino</button>
+        <button id="send-switchbox-btn" class="btn btn-primary">Send Elevation to Sidekick <svg><use href="#i-chevron-right"/></svg></button>
     </div>
 </div>

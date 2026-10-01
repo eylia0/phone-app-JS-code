@@ -1,3 +1,9 @@
+import * as store from './js/store.js';
+import {
+    initSiteUI, openSiteHub, renderSiteHub, renderManagerSites, renderAccountCard,
+    openAccountSwitcher, openAnnouncements, esc, timeAgo
+} from './js/site.js';
+
 let jobProfile = { name: '', location: '' };
 let placementRegistry = [];
 let switchboxRegistry = [];
@@ -10,82 +16,187 @@ let bleCharacteristicCache = null;
 const ARDUINO_BLE_SERVICE_UUID = "0000180c-0000-1000-8000-00805f9b34fb"; // Standardized 180C
 const ARDUINO_BLE_CHAR_UUID    = "00002a56-0000-1000-8000-00805f9b34fb"; // Standardized 2A56
 
+// Pages that show the bottom tab bar
+const TAB_PAGES = ['page-trade-grid', 'page-site', 'page-notes', 'page-more'];
+
 function switchPage(pageId) {
     document.querySelectorAll('.step-view').forEach(p => p.classList.add('hidden'));
     const targetPage = document.getElementById(pageId);
     if (targetPage) targetPage.classList.remove('hidden');
 
-    // Silent background reconnect attempt whenever landing on the main home screen
-    if (pageId === 'page-trade-grid') {
+    const viewport = document.querySelector('.content-viewport');
+    if (viewport) viewport.scrollTop = 0;
+
+    // Bottom tab bar: only on main tabs, highlight the active one
+    const nav = document.getElementById('bottom-nav');
+    if (nav) {
+        nav.classList.toggle('hidden', !TAB_PAGES.includes(pageId));
+        nav.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.toggle('active', item.getAttribute('data-go') === pageId);
+        });
+    }
+
+    // Refresh role-dependent screens when they are opened
+    if (pageId === 'page-site') renderSiteHub();
+    if (pageId === 'page-more') renderAccountCard();
+    if (pageId === 'page-manager-sites') renderManagerSites();
+    if (pageId === 'page-trade-grid') renderHomeExtras();
+
+    // Silent background reconnect attempt on the start and home screens
+    if (pageId === 'page-trade-grid' || pageId === 'page-onboarding') {
         attemptAutoConnect();
     }
 }
 
-// ==========================================================================
-// 1. INITIAL LAUNCH: SCREEN 8 (SPLASH) TO SCREEN 0 (ONBOARDING)
-// ==========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // Show splash screen initially
-    switchPage('page-splash');
-
-    // Automatically transition to Screen 0 (Onboarding) after 2 seconds
-    setTimeout(() => {
-        switchPage('page-onboarding');
-    }, 2000);
-
-    setupOnboardingListeners();
-    setupNotesEngine();
-
-    // Attach click listener to Header Status Badge for manual connection on demand
-    const statusBadge = document.getElementById('status-badge');
-    if (statusBadge) {
-        statusBadge.addEventListener('click', () => {
-            connectToArduino(true);
-        });
-    }
+// Any element with data-go="page-id" navigates there (works for injected trade pages too)
+document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-go]');
+    if (!target) return;
+    switchPage(target.getAttribute('data-go'));
+    const focusId = target.getAttribute('data-focus');
+    if (focusId) document.getElementById(focusId)?.focus();
 });
 
 // ==========================================================================
-// 2. SCREEN 0 ONBOARDING & PREVIOUS SITES LOCAL STORAGE ENGINE
+// 1. INITIAL LAUNCH: SPLASH, THEN RESUME THE SAVED SESSION OR SHOW START
 // ==========================================================================
-function setupOnboardingListeners() {
-    // --- TAB CONTROLLER SWITCHING ---
-    const tabs = document.querySelectorAll('.role-tab');
-    const panels = document.querySelectorAll('.role-panel');
+document.addEventListener('DOMContentLoaded', () => {
+    switchPage('page-splash');
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            panels.forEach(p => p.classList.add('hidden'));
+    initSiteUI({ switchPage, onSiteChanged: applySession });
+    setupOnboardingListeners();
+    setupNotesEngine();
+    setupMoreListeners();
 
-            tab.classList.add('active');
-            const targetPanel = document.getElementById(tab.getAttribute('data-tab'));
-            if (targetPanel) targetPanel.classList.remove('hidden');
-        });
+    // Bluetooth cards (start screen, home tool card, More tab) connect on demand
+    ['bt-start-card', 'tool-card', 'more-bt-row'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => connectToArduino(true));
     });
 
+    setTimeout(routeFromSession, 2000);
+});
+
+function routeFromSession() {
+    const s = store.getSession();
+    if (!s) return switchPage('page-onboarding');
+    if (s.role === 'manager' && !store.currentSite()) return switchPage('page-manager-sites');
+    if (s.role === 'linked' && !store.membership(s.siteId, s.userId)) {
+        // Removed from the site by the manager since last launch
+        store.clearSession();
+        alert('You are no longer linked to that site. Ask your site manager for a new code.');
+        return switchPage('page-onboarding');
+    }
+    applySession();
+    switchPage('page-trade-grid');
+}
+
+// Copy the session's site into the home screen + toggle role-only UI
+function applySession() {
+    const s = store.getSession();
+    const site = store.currentSite();
+    if (site) {
+        jobProfile.name = site.name;
+        jobProfile.location = site.location;
+    } else if (s?.localSite) {
+        jobProfile.name = s.localSite.name;
+        jobProfile.location = s.localSite.location;
+    }
+    // Site tab only exists for people linked to a managed site
+    document.querySelectorAll('.linked-only').forEach(el => el.classList.toggle('hidden', !site));
+    updateProfileDisplay();
+    renderHomeExtras();
+    renderAccountCard();
+}
+
+// Manager code chip + latest announcement banner on Home
+function renderHomeExtras() {
+    const site = store.currentSite();
+    const codeChip = document.getElementById('active-site-code');
+    if (codeChip) {
+        codeChip.classList.toggle('hidden', !(site && store.isManager()));
+        if (site) codeChip.innerText = `Site code ${site.code}`;
+    }
+    const banner = document.getElementById('home-announcement');
+    if (!banner) return;
+    const latest = site ? store.listAnnouncements(site.id)[0] : null;
+    banner.classList.toggle('hidden', !latest);
+    if (latest) {
+        const author = store.getUser(latest.authorId);
+        banner.innerHTML = `
+            <span class="announce-icon">📣</span>
+            <span class="announce-text">
+                <small>${esc(author?.name || '')} · ${timeAgo(latest.createdAt)}</small>
+                <span>${esc(latest.text)}</span>
+            </span>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>`;
+    }
+}
+
+function changeSite() {
+    const s = store.getSession();
+    if (s?.role === 'manager') {
+        store.setSession({ ...s, siteId: null });
+        switchPage('page-manager-sites');
+    } else {
+        switchPage('page-onboarding');
+    }
+}
+
+function setupMoreListeners() {
+    document.getElementById('btn-change-site')?.addEventListener('click', changeSite);
+    document.getElementById('more-change-site')?.addEventListener('click', changeSite);
+    document.getElementById('more-switch-account')?.addEventListener('click', openAccountSwitcher);
+    document.getElementById('home-announcement')?.addEventListener('click', () => {
+        openAnnouncements(() => switchPage('page-trade-grid'));
+    });
+    document.getElementById('more-sign-out')?.addEventListener('click', () => {
+        if (!confirm('Sign out of TradeLink on this device?')) return;
+        store.clearSession();
+        switchPage('page-onboarding');
+    });
+    document.getElementById('more-reset-demo')?.addEventListener('click', () => {
+        if (!confirm('Reset all demo sites, messages and compliance back to the sample data?')) return;
+        store.resetDemoData();
+        switchPage('page-onboarding');
+    });
+}
+
+// ==========================================================================
+// 2. ONBOARDING: LINKED CODE, STANDARD USER, SITE MANAGER
+// ==========================================================================
+function setupOnboardingListeners() {
     // Render saved site history when initializing
     renderPreviousSites();
 
-    // Option A: Linked Code Mode
+    // Option A: Linked user joins with the manager's site code
     const btnSubmitCode = document.getElementById('btn-submit-code');
     if (btnSubmitCode) {
         btnSubmitCode.addEventListener('click', () => {
-            const codeInput = document.getElementById('site-linking-code');
-            const code = codeInput ? codeInput.value.trim() : '';
-            if (!code) return alert("Please enter a valid site linking code.");
+            const code = document.getElementById('site-linking-code')?.value || '';
+            const name = document.getElementById('join-name')?.value || '';
+            const trade = document.getElementById('join-trade')?.value || 'General';
+            const connectNow = document.getElementById('join-connect')?.checked;
 
-            jobProfile.name = `Linked Site (${code.toUpperCase()})`;
-            jobProfile.location = "Connected Site Session";
+            try {
+                store.joinSite(code, name, trade);
+            } catch (err) {
+                return alert(err.message);
+            }
 
-            updateProfileDisplay();
-
-            // Navigate straight to the home screen without forcing a BLE picker
+            applySession();
             switchPage('page-trade-grid');
+
+            // Auto-connect the Sidekick: silent reconnect if paired before, otherwise
+            // open the picker while we still have the button's user gesture
+            const alreadyPaired = bleDeviceCache && bleDeviceCache.gatt.connected;
+            if (connectNow && !alreadyPaired && navigator.bluetooth) {
+                connectToArduino(false);
+            }
         });
     }
 
-    // Option B: Site Worker (No Code - Manual Site Details + History Save)
+    // Option B: Standard user (no code - manual site details + history save)
     const btnSaveUserSite = document.getElementById('btn-save-user-site');
     if (btnSaveUserSite) {
         btnSaveUserSite.addEventListener('click', () => {
@@ -96,33 +207,53 @@ function setupOnboardingListeners() {
 
             if (!name || !loc) return alert("Please fill out both site name and address.");
 
-            jobProfile.name = name;
-            jobProfile.location = loc;
-
             // Save site to local history array
             saveSiteToHistory(name, loc);
 
-            updateProfileDisplay();
+            store.startStandardSession(name, loc);
+            applySession();
             switchPage('page-trade-grid');
         });
     }
 
-    // Option C: Site Manager Mode
+    // Option C: Site manager signs in, then picks or creates a site
+    const btnMgrLogin = document.getElementById('btn-mgr-login');
+    if (btnMgrLogin) {
+        btnMgrLogin.addEventListener('click', () => {
+            try {
+                store.managerSignIn(
+                    document.getElementById('mgr-name')?.value || '',
+                    document.getElementById('mgr-email')?.value || ''
+                );
+            } catch (err) {
+                return alert(err.message);
+            }
+            switchPage('page-manager-sites');
+        });
+    }
+
     const saveProfileBtn = document.getElementById('save-profile-btn');
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', () => {
             const nameInput = document.getElementById('job-name');
             const locInput = document.getElementById('job-location');
+            const addrInput = document.getElementById('job-address');
             const name = nameInput ? nameInput.value.trim() : '';
             const loc = locInput ? locInput.value.trim() : '';
 
             if (!name || !loc) return alert("Please fill out both site name and location.");
 
-            jobProfile.name = name;
-            jobProfile.location = loc;
+            try {
+                store.createSite({ name, location: loc, address: addrInput ? addrInput.value : '' });
+            } catch (err) {
+                alert(err.message);
+                return switchPage('page-manager-login');
+            }
+            [nameInput, locInput, addrInput].forEach(i => { if (i) i.value = ''; });
 
-            updateProfileDisplay();
-            switchPage('page-trade-grid');
+            // Land on the Site tab so the new linking code is front and centre
+            applySession();
+            openSiteHub();
         });
     }
 
@@ -142,9 +273,9 @@ function saveSiteToHistory(name, location) {
     let history = JSON.parse(localStorage.getItem('tradeLinkSiteHistory')) || [];
     history = history.filter(site => site.name !== name);
     history.unshift({ name, location, date: new Date().toLocaleDateString() });
-    
+
     if (history.length > 5) history.pop();
-    
+
     localStorage.setItem('tradeLinkSiteHistory', JSON.stringify(history));
     renderPreviousSites();
 }
@@ -167,15 +298,14 @@ function renderPreviousSites() {
         item.className = 'history-site-item';
         item.innerHTML = `
             <div class="history-site-info">
-                <h5>${site.name}</h5>
-                <p>${site.location}</p>
+                <h5>${esc(site.name)}</h5>
+                <p>${esc(site.location)}</p>
             </div>
             <span class="history-item-arrow">›</span>
         `;
         item.addEventListener('click', () => {
-            jobProfile.name = site.name;
-            jobProfile.location = site.location;
-            updateProfileDisplay();
+            store.startStandardSession(site.name, site.location);
+            applySession();
             switchPage('page-trade-grid');
         });
         historyList.appendChild(item);
@@ -186,7 +316,9 @@ function updateProfileDisplay() {
     const titleEl = document.getElementById('active-profile-title');
     const metaEl = document.getElementById('active-profile-meta');
     if (titleEl) titleEl.innerText = jobProfile.name;
-    if (metaEl) metaEl.innerText = `Location: ${jobProfile.location}`;
+    if (metaEl) metaEl.innerText = jobProfile.location;
+    const notesLabel = document.getElementById('notes-site-label');
+    if (notesLabel) notesLabel.innerText = jobProfile.name;
 
     // Automatically retrieve activity notes saved for this active site
     loadNotesForCurrentSite();
@@ -212,7 +344,7 @@ function setupNotesEngine() {
             activities.unshift({
                 text: text,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date().toLocaleDateString(),
-                author: 'Site Worker'
+                author: store.currentUser()?.name || 'Site Worker'
             });
 
             localStorage.setItem(currentSiteKey, JSON.stringify(activities));
@@ -250,10 +382,10 @@ function loadNotesForCurrentSite() {
         card.className = 'activity-item';
         card.innerHTML = `
             <div class="activity-header">
-                <span class="activity-author">💛 ${item.author} (Work Note)</span>
-                <span class="activity-time">${item.timestamp}</span>
+                <span class="activity-author">💛 ${esc(item.author)} (Work Note)</span>
+                <span class="activity-time">${esc(item.timestamp)}</span>
             </div>
-            <div class="activity-text">${item.text}</div>
+            <div class="activity-text">${esc(item.text)}</div>
         `;
         streamContainer.appendChild(card);
     });
@@ -312,6 +444,7 @@ function setupTaskButtons() {
         openDownlightBtn.onclick = () => {
             hubMenu.classList.add('hidden');
             downlightWorkspace.classList.remove('hidden');
+            goToLightStep(1);
             generateMatrixLayout();
         };
         openSwitchboxBtn.onclick = () => {
@@ -340,30 +473,72 @@ function setupTaskButtons() {
     const sendButton = document.getElementById('send-matrix-btn');
     const widthInput = document.getElementById('room-width-input');
     const lengthInput = document.getElementById('room-length-input');
+    const spacingInput = document.getElementById('light-spacing-input');
     const offsetXInput = document.getElementById('wall-offset-x');
     const offsetYInput = document.getElementById('wall-offset-y');
     const gapXInput = document.getElementById('light-gap-x');
     const gapYInput = document.getElementById('light-gap-y');
+    const estLightsEl = document.getElementById('est-lights');
+    const dimWLabel = document.getElementById('dim-w-label');
+    const dimLLabel = document.getElementById('dim-l-label');
+
+    // --- PLACE LIGHTS WIZARD STEPS (1 Room, 2 Spacing, 3 Send) ---
+    function goToLightStep(step) {
+        document.querySelectorAll('#dl-stepper .step').forEach(s => {
+            const n = Number(s.getAttribute('data-step'));
+            s.classList.toggle('active', n === step);
+            s.classList.toggle('done', n < step);
+        });
+        document.querySelectorAll('#elec-downlight-workspace .step-panel').forEach(p => {
+            p.classList.toggle('hidden', Number(p.getAttribute('data-panel')) !== step);
+        });
+    }
+    document.querySelectorAll('#dl-stepper .step').forEach(s => {
+        s.onclick = () => goToLightStep(Number(s.getAttribute('data-step')));
+    });
+    document.querySelectorAll('#elec-downlight-workspace [data-step-go]').forEach(b => {
+        b.onclick = () => goToLightStep(Number(b.getAttribute('data-step-go')));
+    });
+
+    // Live preview while editing room size / spacing
+    [widthInput, lengthInput, spacingInput, offsetXInput, offsetYInput, gapXInput, gapYInput].forEach(inp => {
+        if (inp) inp.oninput = generateMatrixLayout;
+    });
+
+    // Inputs are in metres; layout math stays in cm
+    const toCm = (input, fallbackCm) => {
+        const m = parseFloat(input?.value);
+        return m > 0 ? m * 100 : fallbackCm;
+    };
 
     function generateMatrixLayout() {
         if (!canvas) return;
         placementRegistry = [];
         document.querySelectorAll('.blueprint-canvas .canvas-fixture-node').forEach(n => n.remove());
-        
-        const roomW = parseFloat(widthInput.value) || 400;
-        const roomL = parseFloat(lengthInput.value) || 300;
-        const offsetX = parseFloat(offsetXInput.value) || 50;
-        const offsetY = parseFloat(offsetYInput.value) || 50;
-        const gapX = parseFloat(gapXInput.value) || 100;
-        const gapY = parseFloat(gapYInput.value) || 100;
-        
+
+        const roomW = toCm(widthInput, 480);
+        const roomL = toCm(lengthInput, 360);
+        const spacing = toCm(spacingInput, 120);
+        const gapX = toCm(gapXInput, spacing);
+        const gapY = toCm(gapYInput, spacing);
+        const offsetX = toCm(offsetXInput, gapX / 2);
+        const offsetY = toCm(offsetYInput, gapY / 2);
+
+        if (dimWLabel) dimWLabel.innerText = `${+(roomW / 100).toFixed(2)} m`;
+        if (dimLLabel) dimLLabel.innerText = `${+(roomL / 100).toFixed(2)} m`;
+
+        // Keep the plan in true proportion, capping very long rooms by height
         const ratio = roomL / roomW;
-        canvas.style.width = `100%`;
-        canvas.style.height = `${canvas.parentElement.clientWidth * ratio}px`;
+        const availW = canvas.parentElement.clientWidth;
+        const maxH = 300;
+        const drawW = availW * ratio > maxH ? maxH / ratio : availW;
+        canvas.style.width = `${drawW}px`;
+        canvas.style.height = `${drawW * ratio}px`;
         if (gapX <= 0 || gapY <= 0) return;
 
-        for (let currentX = offsetX; currentX <= (roomW - offsetX); currentX += gapX) {
-            for (let currentY = offsetY; currentY <= (roomL - offsetY); currentY += gapY) {
+        // +0.5cm tolerance so metre->cm float rounding doesn't drop the last row
+        for (let currentX = offsetX; currentX <= (roomW - offsetX) + 0.5; currentX += gapX) {
+            for (let currentY = offsetY; currentY <= (roomL - offsetY) + 0.5; currentY += gapY) {
                 const pctX = (currentX / roomW) * 100;
                 const pctY = (currentY / roomL) * 100;
                 const nodeId = `dl-${Math.round(currentX)}-${Math.round(currentY)}`;
@@ -379,14 +554,23 @@ function setupTaskButtons() {
                     e.stopPropagation();
                     placementRegistry = placementRegistry.filter(node => node.id !== nodeId);
                     fixtureDot.remove();
-                    fixtureTitle.innerText = `Fixtures Generated: ${placementRegistry.length}`;
+                    updateLightCount();
                 });
                 canvas.appendChild(fixtureDot);
             }
         }
-        fixtureTitle.innerText = `Fixtures Generated: ${placementRegistry.length}`;
+        updateLightCount();
     }
-    if (calculateBtn) calculateBtn.onclick = generateMatrixLayout;
+    function updateLightCount() {
+        if (fixtureTitle) fixtureTitle.innerText = `Downlights: ${placementRegistry.length}`;
+        if (estLightsEl) estLightsEl.innerText = placementRegistry.length;
+    }
+
+    // "Create Layout" builds the grid and moves to the Send step
+    if (calculateBtn) calculateBtn.onclick = () => {
+        generateMatrixLayout();
+        goToLightStep(3);
+    };
     
     // send Downlight to arduino via BLE
     if (sendButton) {
@@ -484,17 +668,6 @@ function setupTaskButtons() {
             sendCommandToArduino(switchboxRegistry.length, "Switchbox Layout Transmission");
         };
     }
-}
-
-// --- GLOBAL BACK BUTTON NAVIGATION ---
-const backToProfileBtn = document.querySelector('.back-to-profile');
-if (backToProfileBtn) {
-    backToProfileBtn.addEventListener('click', () => switchPage('page-onboarding'));
-}
-
-const backToTradesBtn = document.querySelector('.back-to-trades');
-if (backToTradesBtn) {
-    backToTradesBtn.addEventListener('click', () => switchPage('page-trade-grid'));
 }
 
 // ==========================================================================
@@ -696,15 +869,70 @@ function setupGeneralTaskButtons() {
 // 8. CORE BLUETOOTH TRANSMISSION & AUTO-CONNECT ENGINE
 // ==========================================================================
 
-// Silent Background Auto-Connect Attempt (runs automatically on Home Screen)
+// Updates every Bluetooth indicator (start card, home tool card, More tab)
+// state: 'connected' | 'connecting' | 'disconnected'
+function setBleStatus(state) {
+    const titles = {
+        connected: { start: 'Bluetooth Connected', tool: 'Tool Connected', more: 'Connected' },
+        connecting: { start: 'Connecting...', tool: 'Connecting...', more: 'Connecting...' },
+        disconnected: { start: 'Bluetooth Disconnected', tool: 'Tool Disconnected', more: 'Disconnected' }
+    }[state];
+    const deviceName = (state === 'connected' && bleDeviceCache?.name) || '';
+
+    const cards = {
+        start: document.getElementById('bt-start-card'),
+        tool: document.getElementById('tool-card'),
+        more: document.getElementById('more-bt-row')
+    };
+    Object.entries(cards).forEach(([key, card]) => {
+        if (!card) return;
+        card.classList.toggle('is-connected', state === 'connected');
+        card.classList.toggle('is-connecting', state === 'connecting');
+        const title = card.querySelector('.bt-status-title');
+        if (title) title.innerText = titles[key];
+    });
+
+    const startSub = cards.start?.querySelector('.bt-status-sub');
+    if (startSub) startSub.innerText = state === 'connected' ? (deviceName || 'TradeLink Tools') : 'Tap to connect TradeLink tools';
+
+    const toolSub = cards.tool?.querySelector('.bt-device-name');
+    if (toolSub) toolSub.innerText = state === 'connected' ? (deviceName || 'TradeLink Sidekick') : 'Tap to connect';
+
+    const battery = cards.tool?.querySelector('.battery');
+    if (battery) {
+        battery.classList.toggle('hidden', state !== 'connected');
+        if (state === 'connected') readBatteryLevel();
+    }
+}
+
+// Reads the standard BLE Battery Service if the Sidekick exposes it (optional)
+async function readBatteryLevel() {
+    const pctEl = document.querySelector('#tool-card .battery-pct');
+    const fillEl = document.querySelector('#tool-card .battery-fill');
+    try {
+        const service = await bleDeviceCache.gatt.getPrimaryService('battery_service');
+        const characteristic = await service.getCharacteristic('battery_level');
+        const value = await characteristic.readValue();
+        const pct = value.getUint8(0);
+        if (pctEl) pctEl.innerText = `${pct}%`;
+        if (fillEl) fillEl.style.width = `${pct}%`;
+    } catch (err) {
+        // Device has no battery service yet
+        if (pctEl) pctEl.innerText = '--';
+        if (fillEl) fillEl.style.width = '0';
+    }
+}
+
+function handleBleDisconnect() {
+    console.warn("[BLE] Sidekick link dropped.");
+    bleCharacteristicCache = null;
+    setBleStatus('disconnected');
+}
+
+// Silent Background Auto-Connect Attempt (runs on Start and Home screens)
 async function attemptAutoConnect() {
-    const statusBadge = document.getElementById('status-badge');
-    
     if (bleDeviceCache && bleDeviceCache.gatt.connected) {
-        if (statusBadge) {
-            statusBadge.innerText = "Connected";
-            statusBadge.className = "badge connected";
-        }
+        setBleStatus('connected');
         return;
     }
 
@@ -716,23 +944,14 @@ async function attemptAutoConnect() {
             if (matchingDevice) {
                 console.log("[BLE] Found previously paired device, attempting silent reconnect...");
                 bleDeviceCache = matchingDevice;
-                
-                bleDeviceCache.addEventListener('gattserverdisconnected', () => {
-                    if (statusBadge) {
-                        statusBadge.innerText = "Disconnected";
-                        statusBadge.className = "badge disconnected";
-                    }
-                    bleCharacteristicCache = null;
-                });
+                bleDeviceCache.removeEventListener('gattserverdisconnected', handleBleDisconnect);
+                bleDeviceCache.addEventListener('gattserverdisconnected', handleBleDisconnect);
 
                 const server = await bleDeviceCache.gatt.connect();
                 const service = await server.getPrimaryService(ARDUINO_BLE_SERVICE_UUID);
                 bleCharacteristicCache = await service.getCharacteristic(ARDUINO_BLE_CHAR_UUID);
 
-                if (statusBadge) {
-                    statusBadge.innerText = "Connected";
-                    statusBadge.className = "badge connected";
-                }
+                setBleStatus('connected');
                 console.log("[BLE] Silent auto-reconnect successful!");
             }
         } catch (err) {
@@ -741,10 +960,9 @@ async function attemptAutoConnect() {
     }
 }
 
-// Manual Connection Picker (triggered when clicking Disconnected badge)
+// Manual Connection Picker (triggered from any Bluetooth card)
 async function connectToArduino(userInitiated = true) {
     console.log("[BLE] Connection requested...");
-    const statusBadge = document.getElementById('status-badge');
 
     if (!navigator.bluetooth) {
         if (userInitiated) {
@@ -755,25 +973,15 @@ async function connectToArduino(userInitiated = true) {
 
     try {
         if (!bleDeviceCache || !bleDeviceCache.gatt.connected) {
-            if (statusBadge) {
-                statusBadge.innerText = "Connecting...";
-            }
+            setBleStatus('connecting');
 
             console.log("[BLE] Opening device search picker...");
-            
-               
             bleDeviceCache = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [ARDUINO_BLE_SERVICE_UUID] }] 
+                filters: [{ services: [ARDUINO_BLE_SERVICE_UUID] }],
+                optionalServices: ['battery_service']
             });
 
-            bleDeviceCache.addEventListener('gattserverdisconnected', () => {
-                console.warn("[BLE] Arduino link dropped.");
-                if (statusBadge) {
-                    statusBadge.innerText = "Disconnected";
-                    statusBadge.className = "badge disconnected";
-                }
-                bleCharacteristicCache = null;
-            });
+            bleDeviceCache.addEventListener('gattserverdisconnected', handleBleDisconnect);
 
             console.log("[BLE] Connecting to GATT Server...");
             const server = await bleDeviceCache.gatt.connect();
@@ -785,20 +993,13 @@ async function connectToArduino(userInitiated = true) {
             bleCharacteristicCache = await service.getCharacteristic(ARDUINO_BLE_CHAR_UUID);
         }
 
-        if (statusBadge) {
-            statusBadge.innerText = "Connected";
-            statusBadge.className = "badge connected";
-        }
-
+        setBleStatus('connected');
         console.log("[BLE] Successfully connected!");
         return true;
 
     } catch (error) {
         console.error("[BLE Error]", error);
-        if (statusBadge) {
-            statusBadge.innerText = "Disconnected";
-            statusBadge.className = "badge disconnected";
-        }
+        setBleStatus('disconnected');
         return false;
     }
 }

@@ -1,8 +1,10 @@
 <div id="gen-hub-menu" class="sub-feature-view">
-    <div class="banner general-banner" style="background: linear-gradient(135deg, #16a085, #2c3e50);">
-        <h3>General Handyman Tools</h3>
-        <p>Select a smart measurement or geometric utility</p>
-    </div>
+    <header class="page-header">
+        <button class="icon-btn" data-go="page-trade-grid" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>General</h1>
+        <span class="icon-btn-spacer"></span>
+    </header>
+    <p class="muted page-sub">Select a smart measurement or geometric utility.</p>
 
     <div class="feature-menu-list">
         <div class="feature-menu-item" id="open-tape-btn">
@@ -11,7 +13,7 @@
                 <h5>Smart Tap-to-Measure</h5>
                 <p>Plot two coordinates on screen to calculate real distance with a vibration alert.</p>
             </div>
-            <div class="feature-item-arrow">➔</div>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>
         </div>
 
         <div class="feature-menu-item" id="open-calc-btn">
@@ -20,21 +22,18 @@
                 <h5>Geometric Calculator</h5>
                 <p>Instantly evaluate Area, Volume, Surface Area, and Circumference.</p>
             </div>
-            <div class="feature-item-arrow">➔</div>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>
         </div>
     </div>
 </div>
 
 <div id="gen-tape-workspace" class="sub-feature-view hidden">
-    <div class="banner general-banner" style="background: linear-gradient(135deg, #16a085, #2c3e50);">
-        <div class="banner-with-back">
-            <button id="back-to-gen-hub-1" class="mini-back-btn">‹ Hub</button>
-            <div>
-                <h3>Smart Tap-to-Measure</h3>
-                <p>Tap two spots to measure. Set a target alert distance below.</p>
-            </div>
-        </div>
-    </div>
+    <header class="page-header">
+        <button id="back-to-gen-hub-1" class="icon-btn" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Tap-to-Measure</h1>
+        <span class="icon-btn-spacer"></span>
+    </header>
+    <p class="muted page-sub">Tap two spots to measure. Set a target alert distance below.</p>
 
     <div class="electrical-controls">
         <div class="measurement-matrix-box">
@@ -61,15 +60,12 @@
 </div>
 
 <div id="gen-calc-workspace" class="sub-feature-view hidden">
-    <div class="banner general-banner" style="background: linear-gradient(135deg, #16a085, #2c3e50);">
-        <div class="banner-with-back">
-            <button id="back-to-gen-hub-2" class="mini-back-btn">‹ Hub</button>
-            <div>
-                <h3>Geometric Spatial Calculator</h3>
-                <p>Input basic job margins to compute advanced calculations instantly.</p>
-            </div>
-        </div>
-    </div>
+    <header class="page-header">
+        <button id="back-to-gen-hub-2" class="icon-btn" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Calculator</h1>
+        <button class="icon-btn info-bubble" data-legal="tape" aria-label="Info">i</button>
+    </header>
+    <p class="muted page-sub">Enter dimensions to compute area, volume and more.</p>
 
     <div class="electrical-controls">
         <div class="measurement-matrix-box">

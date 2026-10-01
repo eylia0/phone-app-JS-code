@@ -3,187 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TradeLink BLE Controller</title>
+    <meta name="theme-color" content="#138d96">
+    <title>TradeLink</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- HEADER BAR -->
-        <!-- HEADER BAR WITH CLICKABLE CONNECTION BADGE -->
-        <header class="app-header">
-            <div class="header-main">
-                <h2>TradeLink BLE</h2>
-                <span id="status-badge" class="badge disconnected" style="cursor: pointer;" title="Click to Connect Bluetooth">Disconnected</span>
-            </div>
-        </header>
+    <!-- ICON SPRITE (referenced with <svg><use href="#i-name"/></svg>) -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+        <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+        <symbol id="i-cog" viewBox="0 0 24 24"><mask id="cog-hole"><rect width="24" height="24" fill="#fff"/><circle cx="12" cy="12" r="3.3" fill="#000"/></mask><g fill="currentColor" mask="url(#cog-hole)"><circle cx="12" cy="12" r="7.4"/><rect x="10.1" y="1.6" width="3.8" height="20.8" rx="1.2"/><rect x="10.1" y="1.6" width="3.8" height="20.8" rx="1.2" transform="rotate(45 12 12)"/><rect x="10.1" y="1.6" width="3.8" height="20.8" rx="1.2" transform="rotate(90 12 12)"/><rect x="10.1" y="1.6" width="3.8" height="20.8" rx="1.2" transform="rotate(135 12 12)"/></g></symbol>
+        <symbol id="i-bluetooth" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></symbol>
+        <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20.5h1M20.5 14h.5"/></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 12h8M8 16h8"/></symbol>
+        <symbol id="i-file-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9l5 5v5"/><circle cx="18" cy="18" r="4.2"/><path d="M18 16v4M16 18h4"/></symbol>
+        <symbol id="i-building" viewBox="0 0 24 24" fill="currentColor"><path d="M5 21V5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 15 5v16h-3v-3h-4v3zm3-14v2h1.5V7zm3 0v2h1.5V7zM8 11v2h1.5v-2zm3 0v2h1.5v-2zM8 15v1.5h1.5V15zm3 0v1.5h1.5V15z"/><path d="M16 9h2.5A1.5 1.5 0 0 1 20 10.5V21h-4zm1.2 3v1.5h1.5V12zm0 3.5V17h1.5v-1.5z"/></symbol>
+        <symbol id="i-hammer" viewBox="0 0 24 24"><g fill="currentColor" transform="rotate(45 12 12) translate(12 12) scale(.88) translate(-12 -12)"><rect x="10.5" y="7.5" width="3" height="15.5" rx="1.3"/><path d="M6.5 2h9a1.2 1.2 0 0 1 1.2 1.2v4.6A1.2 1.2 0 0 1 15.5 9h-9L4 6.8V4.2z"/></g></symbol>
+        <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M14 1.5 4 14h7.2L10 22.5 20 10h-7.2z" fill="#f59e0b"/></symbol>
+        <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2.2S5 9.8 5 14.8a7 7 0 0 0 14 0c0-5-7-12.6-7-12.6z" fill="#1e7be0"/></symbol>
+        <symbol id="i-home" viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.6 12 3l9 7.6V20a1.2 1.2 0 0 1-1.2 1.2H15v-6.4H9v6.4H4.2A1.2 1.2 0 0 1 3 20z"/></symbol>
+        <symbol id="i-notes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 12h8M8 16h8"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+        <symbol id="i-resize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/></symbol>
+        <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></symbol>
+        <symbol id="i-tool" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 2h5v3h1A2.5 2.5 0 0 1 18 7.5v12a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 6 19.5v-12A2.5 2.5 0 0 1 8.5 5h1zM12 11a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></symbol>
+        <symbol id="i-manager" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></symbol>
+        <symbol id="i-site" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V9l7-5 7 5v12"/><path d="M9.5 21v-5h5v5M9 11.5h1.5M13.5 11.5H15"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+    </svg>
 
+    <div class="app-container">
         <main class="content-viewport">
-            
-            <!-- SCREEN 8: SPLASH VIEW -->
+
+            <!-- SPLASH -->
             <section id="page-splash" class="step-view">
                 <div class="splash-container">
-                    <h1 class="splash-logo">TradeLink BLE</h1>
+                    <h1 class="wordmark wordmark-light">Trade<span>Link</span></h1>
                     <div class="loading-spinner"></div>
                 </div>
             </section>
 
-            <!-- SCREEN 0 & SCREEN 1: ONBOARDING & PROFILE MANAGER SETUP -->
-<!-- SCREEN 0: ONBOARDING WITH LOCAL SITE HISTORY -->
-<section id="page-onboarding" class="step-view">
-    <div class="onboarding-wrapper">
-        
-        <div class="welcome-hero">
-            <h1>Get Started</h1>
-            <p>Select your operational mode to continue</p>
-        </div>
+            <!-- START YOUR JOB -->
+            <section id="page-onboarding" class="step-view hidden">
+                <header class="brand-bar">
+                    <h1 class="wordmark">Trade<span>Link</span></h1>
+                    <button class="icon-btn" data-go="page-more" aria-label="Settings"><svg><use href="#i-cog"/></svg></button>
+                </header>
 
-        <!-- SEGMENTED ROLE CONTROLLER -->
-        <div class="role-segmented-control">
-            <button class="role-tab active" data-tab="tab-linked">Linked Code</button>
-            <button class="role-tab" data-tab="tab-user">Site Worker</button>
-            <button class="role-tab" data-tab="tab-manager">Manager</button>
-        </div>
-
-        <!-- TAB CONTENT 1: LINKED CODE MODE -->
-        <div id="tab-linked" class="mode-card role-panel">
-            <div class="mode-card-header">
-                <div class="mode-icon-bubble">🔗</div>
-                <div class="mode-title-meta">
-                    <h3>Connect to Site</h3>
-                    <p>Enter your employer's site linking code</p>
+                <div class="hero-text">
+                    <h2>Start Your Job</h2>
+                    <p>Connect, identify your site and get to work.</p>
                 </div>
-            </div>
 
-            <div class="cyan-code-box">
-                <input type="text" id="site-linking-code" placeholder="e.g. A8X922" maxlength="8">
-                <button id="btn-submit-code" class="btn btn-cyan" style="width: auto; padding: 10px 14px;">Sync</button>
-            </div>
-        </div>
+                <button id="bt-start-card" class="list-card bt-card">
+                    <span class="round-icon bt-icon"><svg><use href="#i-bluetooth"/></svg></span>
+                    <span class="list-card-text">
+                        <strong class="bt-status-title">Bluetooth Disconnected</strong>
+                        <small class="bt-status-sub">Tap to connect TradeLink tools</small>
+                    </span>
+                    <svg class="chev"><use href="#i-chevron-right"/></svg>
+                </button>
 
-        <!-- TAB CONTENT 2: SITE WORKER (NO CODE / INDEPENDENT SITE DETAILS) -->
-        <div id="tab-user" class="mode-card role-panel hidden">
-            <div class="mode-card-header">
-                <div class="mode-icon-bubble">🛠️</div>
-                <div class="mode-title-meta">
-                    <h3>Site Worker</h3>
-                    <p>Enter job details for standalone sites</p>
+                <button class="action-card primary" data-go="page-code">
+                    <svg class="action-icon"><use href="#i-code"/></svg>
+                    <span class="action-text">
+                        <strong>Use Site Code</strong>
+                        <small>Scan or enter the code at your site.</small>
+                    </span>
+                    <svg class="chev"><use href="#i-chevron-right"/></svg>
+                </button>
+
+                <button class="action-card" data-go="page-site-details">
+                    <svg class="action-icon"><use href="#i-file"/></svg>
+                    <span class="action-text">
+                        <strong>Enter Site Details</strong>
+                        <small>Add the site information manually.</small>
+                    </span>
+                    <svg class="chev"><use href="#i-chevron-right"/></svg>
+                </button>
+
+                <button class="text-link-btn" data-go="page-manager-login">
+                    <svg><use href="#i-manager"/></svg> Site manager? Create a site profile
+                </button>
+
+                <svg class="skyline" viewBox="0 0 400 150" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+                    <circle cx="320" cy="62" r="34" fill="#fde9c4" opacity=".7"/>
+                    <g fill="#dfe6ea">
+                        <rect x="0" y="80" width="26" height="70"/><rect x="250" y="60" width="22" height="90"/>
+                        <rect x="276" y="84" width="30" height="66"/><rect x="340" y="50" width="20" height="100"/>
+                        <rect x="362" y="74" width="38" height="76"/><rect x="214" y="90" width="30" height="60"/>
+                    </g>
+                    <g fill="none" stroke="#c9d3d9" stroke-width="2">
+                        <path d="M60 150V24M60 24h110M60 24 40 40h20M95 24v18M60 40l18-16"/>
+                        <rect x="70" y="80" width="130" height="70"/><path d="M70 104h130M70 128h130M100 80v70M130 80v70M160 80v70"/>
+                    </g>
+                    <rect x="0" y="138" width="400" height="12" fill="#e8edf0"/>
+                </svg>
+            </section>
+
+            <!-- USE SITE CODE -->
+            <section id="page-code" class="step-view hidden">
+                <header class="page-header">
+                    <button class="icon-btn" data-go="page-onboarding" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+                    <h1>Use Site Code</h1>
+                    <span class="icon-btn-spacer"></span>
+                </header>
+                <div class="card stack">
+                    <p class="muted">Enter the linking code your site manager shared with you.</p>
+                    <div class="code-box">
+                        <input type="text" id="site-linking-code" placeholder="e.g. A8X922" maxlength="8" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" id="join-name" placeholder="e.g. Jordan Lee" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label>Your Trade</label>
+                        <select id="join-trade">
+                            <option>Electrical</option>
+                            <option>Plumbing</option>
+                            <option>General</option>
+                        </select>
+                    </div>
+                    <label class="toggle-row plain">
+                        <span>Connect my Sidekick now</span>
+                        <input type="checkbox" class="switch" id="join-connect" checked>
+                    </label>
+                    <button id="btn-submit-code" class="btn btn-primary">Join Site <svg><use href="#i-chevron-right"/></svg></button>
                 </div>
-            </div>
+                <p class="subtle-hint center">Demo site code: <strong>RIV842</strong></p>
+            </section>
 
-            <div class="form-group">
-                <label>Job / Site Name</label>
-                <input type="text" id="user-job-name" placeholder="e.g., Parramatta Kitchen Refit">
-            </div>
-            <div class="form-group">
-                <label>Location / Address</label>
-                <input type="text" id="user-job-location" placeholder="e.g., 88 Quarry Rd, Parramatta">
-            </div>
-            <button id="btn-save-user-site" class="btn btn-cyan">Enter Site Workspace ›</button>
+            <!-- ENTER SITE DETAILS (STANDARD USER) -->
+            <section id="page-site-details" class="step-view hidden">
+                <header class="page-header">
+                    <button class="icon-btn" data-go="page-onboarding" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+                    <h1>Site Details</h1>
+                    <span class="icon-btn-spacer"></span>
+                </header>
+                <div class="card stack">
+                    <div class="form-group">
+                        <label>Job / Site Name</label>
+                        <input type="text" id="user-job-name" placeholder="e.g. Parramatta Kitchen Refit">
+                    </div>
+                    <div class="form-group">
+                        <label>Location / Address</label>
+                        <input type="text" id="user-job-location" placeholder="e.g. 88 Quarry Rd, Parramatta">
+                    </div>
+                    <button id="btn-save-user-site" class="btn btn-primary">Enter Site Workspace <svg><use href="#i-chevron-right"/></svg></button>
+                </div>
 
-            <!-- PREVIOUSLY ENTERED SITES HISTORY LIST -->
-            <div class="history-sites-container">
                 <div class="history-title-row">
-                    <label>Saved Previous Sites</label>
+                    <h4 class="section-title">Previous Sites</h4>
                     <button id="btn-clear-history" class="text-action-link">Clear All</button>
                 </div>
                 <div id="previous-sites-list" class="history-list-box">
                     <p class="empty-history-text">No previous sites saved yet.</p>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <!-- TAB CONTENT 3: MANAGER MODE -->
-        <div id="tab-manager" class="mode-card role-panel hidden">
-            <div class="mode-card-header">
-                <div class="mode-icon-bubble">📊</div>
-                <div class="mode-title-meta">
-                    <h3>Site Manager</h3>
-                    <p>Configure a new job workspace</p>
+            <!-- SITE MANAGER SETUP -->
+            <section id="page-manager" class="step-view hidden">
+                <header class="page-header">
+                    <button class="icon-btn" data-go="page-manager-sites" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+                    <h1>Create Site</h1>
+                    <span class="icon-btn-spacer"></span>
+                </header>
+                <div class="card stack">
+                    <p class="muted">Set up a site profile. You'll be able to share a linking code with your workers.</p>
+                    <div class="form-group">
+                        <label>Site Name</label>
+                        <input type="text" id="job-name" placeholder="e.g. Riverside Apartments">
+                    </div>
+                    <div class="form-group">
+                        <label>Location / Unit</label>
+                        <input type="text" id="job-location" placeholder="e.g. Block A, Level 2">
+                    </div>
+                    <div class="form-group">
+                        <label>Address (optional)</label>
+                        <input type="text" id="job-address" placeholder="e.g. 12 River Rd, Parramatta">
+                    </div>
+                    <button id="save-profile-btn" class="btn btn-primary">Create Site Profile <svg><use href="#i-chevron-right"/></svg></button>
                 </div>
-            </div>
+            </section>
 
-            <div class="form-group">
-                <label>Site Name</label>
-                <input type="text" id="job-name" placeholder="Commercial Refit">
-            </div>
-            <div class="form-group">
-                <label>Location / Unit</label>
-                <input type="text" id="job-location" placeholder="Level 4, Room 402">
-            </div>
-            <button id="save-profile-btn" class="btn btn-cyan">Create Site Profile ›</button>
-        </div>
+            <!-- SITE MANAGER SIGN IN -->
+            <section id="page-manager-login" class="step-view hidden">
+                <header class="page-header">
+                    <button class="icon-btn" data-go="page-onboarding" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+                    <h1>Site Manager</h1>
+                    <span class="icon-btn-spacer"></span>
+                </header>
+                <div class="card stack">
+                    <p class="muted">Sign in to create and manage your sites, share linking codes and manage your team.</p>
+                    <div class="form-group">
+                        <label>Your Name</label>
+                        <input type="text" id="mgr-name" placeholder="e.g. Sam Carter" autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label>Work Email</label>
+                        <input type="email" id="mgr-email" placeholder="e.g. sam@builder.com" autocomplete="email">
+                    </div>
+                    <button id="btn-mgr-login" class="btn btn-primary">Continue <svg><use href="#i-chevron-right"/></svg></button>
+                </div>
+                <p class="subtle-hint center">Demo manager: Sam Carter, sam@riverside.demo (offline demo, no password)</p>
+            </section>
 
-    </div>
-</section>
+            <!-- SITE MANAGER: MY SITES -->
+            <section id="page-manager-sites" class="step-view hidden">
+                <header class="brand-bar">
+                    <h1 class="page-title" id="manager-greeting">My Sites</h1>
+                    <button class="icon-btn" data-go="page-more" aria-label="Settings"><svg><use href="#i-cog"/></svg></button>
+                </header>
+                <p class="muted page-sub">Pick a site to manage, or create a new one.</p>
+                <div id="manager-sites-body" class="settings-list"></div>
+                <button class="btn btn-primary" data-go="page-manager"><svg><use href="#i-plus"/></svg> Create New Site</button>
+            </section>
 
-<!-- SCREEN 2: TRADE SELECTOR GRID -->
-<section id="page-trade-grid" class="step-view hidden">
-    <!-- Active Site Banner Card -->
-    <div class="site-header-card">
-        <div class="site-badge-tag">Active Site</div>
-        <h3 id="active-profile-title">Joe's Site</h3>
-        <p id="active-profile-meta">88 Quarry Road, Parramatta NSW 2150</p>
-    </div>
+            <!-- HOME -->
+            <section id="page-trade-grid" class="step-view hidden">
+                <header class="brand-bar">
+                    <h1 class="wordmark">Trade<span>Link</span></h1>
+                    <button class="icon-btn" data-go="page-more" aria-label="Settings"><svg><use href="#i-cog"/></svg></button>
+                </header>
 
-    <h4 class="section-title">Select a Trade Category</h4>
-    
-    <div class="trade-grid">
-        <div class="trade-tile hero-tile" data-file="trades/general.html">
-            <div class="tile-icon">🛠️</div>
-            <div class="tile-name">General Trade</div>
-        </div>
-        <div class="trade-tile" data-file="trades/electrical.html">
-            <div class="tile-icon">⚡</div>
-            <div class="tile-name">Electrical</div>
-        </div>
-        <div class="trade-tile" data-file="trades/plumbing.html">
-            <div class="tile-icon">💧</div>
-            <div class="tile-name">Plumbing</div>
-        </div>
-    </div>
+                <button id="tool-card" class="list-card tool-card">
+                    <span class="round-icon tool-icon"><svg><use href="#i-tool"/></svg></span>
+                    <span class="list-card-text">
+                        <strong><i class="status-dot"></i><span class="bt-status-title">Tool Disconnected</span></strong>
+                        <small class="bt-device-name">Tap to connect</small>
+                    </span>
+                    <span class="battery hidden"><i class="battery-shell"><i class="battery-fill"></i></i><span class="battery-pct">--</span></span>
+                    <svg class="chev"><use href="#i-chevron-right"/></svg>
+                </button>
 
-    <button class="btn btn-secondary-outline back-to-profile">‹ Edit Job Details</button>
+                <div class="card site-card">
+                    <span class="round-icon site-icon"><svg><use href="#i-building"/></svg></span>
+                    <div class="site-card-text">
+                        <small>Active Site</small>
+                        <h3 id="active-profile-title">Site</h3>
+                        <p id="active-profile-meta"></p>
+                        <span id="active-site-code" class="code-chip hidden"></span>
+                        <button class="link-btn" id="btn-change-site">Change Site</button>
+                    </div>
+                    <svg class="chev"><use href="#i-chevron-right"/></svg>
+                </div>
 
-    <!-- Simplistic Site Notes Area -->
-   <!-- SIMPLISTIC SITE NOTES AREA WITH SAVE ACTION -->
-    <!-- SERVICENOW STYLE ACTIVITY STREAM NOTES -->
-    <div class="notes-card-box">
-        <div class="notes-header-row">
-            <label>Work Notes & Activity Stream</label>
-            <span id="notes-saved-status" class="notes-status-text">Posted!</span>
-        </div>
+                <button id="home-announcement" class="announce-banner hidden"></button>
 
-        <!-- Input Composer Area -->
-        <div class="servicenow-composer">
-            <textarea id="site-notes-input" placeholder="Add a work note..." rows="2"></textarea>
-            <button id="btn-save-notes" class="btn btn-cyan" style="padding: 10px 16px;">Post Note</button>
-        </div>
+                <div class="trade-grid">
+                    <button class="trade-tile" data-file="trades/general.html">
+                        <svg class="tile-icon hammer"><use href="#i-hammer"/></svg>
+                        <span class="tile-name">General</span>
+                        <span class="tile-desc">Notes, photos and tasks.</span>
+                    </button>
+                    <button class="trade-tile" data-file="trades/electrical.html">
+                        <svg class="tile-icon"><use href="#i-bolt"/></svg>
+                        <span class="tile-name">Electrical</span>
+                        <span class="tile-desc">Layouts, points and circuits.</span>
+                    </button>
+                    <button class="trade-tile" data-file="trades/plumbing.html">
+                        <svg class="tile-icon"><use href="#i-drop"/></svg>
+                        <span class="tile-name">Plumbing</span>
+                        <span class="tile-desc">Layouts, points and fixtures.</span>
+                    </button>
+                </div>
 
-        <!-- Activity Stream Output -->
-        <div id="activity-stream-list" class="activity-stream">
-            <!-- Posted notes will dynamically appear here -->
-        </div>
-    </div>
-</section>
+                <button class="action-card primary compact" data-go="page-notes" data-focus="site-notes-input">
+                    <svg class="action-icon"><use href="#i-file-plus"/></svg>
+                    <span class="action-text">
+                        <strong>Add Note</strong>
+                        <small>Take a photo, record a note or add a task.</small>
+                    </span>
+                    <svg class="chev"><use href="#i-chevron-right"/></svg>
+                </button>
+            </section>
 
-            <!-- PAGE 2: DYNAMIC TRADE SUB-VIEW CONTENT -->
+            <!-- NOTES (ACTIVITY STREAM) -->
+            <section id="page-notes" class="step-view hidden">
+                <header class="brand-bar">
+                    <h1 class="page-title">Notes</h1>
+                    <span id="notes-saved-status" class="notes-status-text">Posted!</span>
+                </header>
+                <p class="muted notes-site-label" id="notes-site-label"></p>
+
+                <div class="card servicenow-composer">
+                    <textarea id="site-notes-input" placeholder="Add a work note..." rows="3"></textarea>
+                    <button id="btn-save-notes" class="btn btn-primary">Post Note</button>
+                </div>
+
+                <h4 class="section-title">Activity</h4>
+                <div id="activity-stream-list" class="activity-stream"></div>
+            </section>
+
+            <!-- SITE TAB -->
+            <section id="page-site" class="step-view hidden">
+                <header class="brand-bar">
+                    <h1 class="page-title">Site</h1>
+                </header>
+                <div id="site-hub-body" class="step-stack"></div>
+            </section>
+
+            <!-- GENERIC SUB VIEW (announcements, team, chat, docs, compliance...) -->
+            <section id="page-sub" class="step-view hidden">
+                <header class="page-header">
+                    <button class="icon-btn" id="sub-back" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+                    <h1 id="sub-title"></h1>
+                    <span class="icon-btn-spacer"></span>
+                </header>
+                <div id="sub-body" class="step-stack"></div>
+            </section>
+
+            <!-- MORE / SETTINGS -->
+            <section id="page-more" class="step-view hidden">
+                <header class="brand-bar">
+                    <h1 class="page-title">More</h1>
+                </header>
+                <div id="account-card" class="list-card account-card"></div>
+                <div class="settings-list">
+                    <button class="list-card" id="more-bt-row">
+                        <span class="round-icon soft"><svg><use href="#i-bluetooth"/></svg></span>
+                        <span class="list-card-text">
+                            <strong>Sidekick Device</strong>
+                            <small class="bt-status-title">Disconnected</small>
+                        </span>
+                        <svg class="chev"><use href="#i-chevron-right"/></svg>
+                    </button>
+                    <button class="list-card" id="more-change-site">
+                        <span class="round-icon soft"><svg><use href="#i-building"/></svg></span>
+                        <span class="list-card-text">
+                            <strong>Change Site</strong>
+                            <small>Join, pick or create another site</small>
+                        </span>
+                        <svg class="chev"><use href="#i-chevron-right"/></svg>
+                    </button>
+                    <button class="list-card" id="more-switch-account">
+                        <span class="round-icon soft"><svg><use href="#i-user"/></svg></span>
+                        <span class="list-card-text">
+                            <strong>Switch Account</strong>
+                            <small>Demo: test manager and worker views</small>
+                        </span>
+                        <svg class="chev"><use href="#i-chevron-right"/></svg>
+                    </button>
+                    <button class="list-card" id="more-sign-out">
+                        <span class="round-icon soft emoji">&#8617;</span>
+                        <span class="list-card-text">
+                            <strong>Sign Out</strong>
+                            <small>Return to the start screen</small>
+                        </span>
+                    </button>
+                    <button class="list-card" id="more-reset-demo">
+                        <span class="round-icon soft emoji">&#10226;</span>
+                        <span class="list-card-text">
+                            <strong>Reset Demo Data</strong>
+                            <small>Restore the sample site and clear changes</small>
+                        </span>
+                    </button>
+                </div>
+                <p class="muted version-text">TradeLink · prototype build</p>
+            </section>
+
+            <!-- DYNAMIC TRADE CONTENT -->
             <section id="page-dynamic-trade-view" class="step-view hidden">
                 <div id="trade-file-content"></div>
             </section>
 
         </main>
 
+        <!-- BOTTOM TAB BAR -->
+        <nav id="bottom-nav" class="bottom-nav hidden">
+            <button class="nav-item" data-go="page-trade-grid"><svg><use href="#i-home"/></svg><span>Home</span></button>
+            <button class="nav-item linked-only" data-go="page-site"><svg><use href="#i-site"/></svg><span>Site</span></button>
+            <button class="nav-item" data-go="page-notes"><svg><use href="#i-notes"/></svg><span>Notes</span></button>
+            <button class="nav-item" data-go="page-more"><svg><use href="#i-user"/></svg><span>More</span></button>
+        </nav>
+
         <!-- LEGAL COMPLIANCE OVERLAY MODAL -->
         <div id="legal-modal-overlay" class="modal-overlay hidden">
             <div class="modal-card">
                 <h3 id="modal-legal-title">Building Code Compliance</h3>
                 <div id="modal-legal-body" class="modal-body-content"></div>
-                <button id="close-legal-modal-btn" class="btn btn-cyan" style="margin-top: 16px;">Dismiss & Close</button>
+                <button id="close-legal-modal-btn" class="btn btn-primary" style="margin-top: 16px;">Dismiss &amp; Close</button>
             </div>
         </div>
-
-    </div> 
+    </div>
 
     <script src="app.js" type="module"></script>
 </body>
