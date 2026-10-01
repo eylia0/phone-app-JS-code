@@ -1,4 +1,8 @@
 import * as store from './js/store.js';
+import * as sidekick from './js/sidekick.js';
+import { initJobData, renderJobPanels, recordLayout, showSegment } from './js/jobdata.js';
+import { openPlan } from './js/plan.js';
+import { setupPlumbing } from './js/plumbing.js';
 import {
     initSiteUI, openSiteHub, renderSiteHub, renderManagerSites, renderAccountCard,
     openAccountSwitcher, openAnnouncements, esc, timeAgo
@@ -41,6 +45,7 @@ function switchPage(pageId) {
     if (pageId === 'page-more') renderAccountCard();
     if (pageId === 'page-manager-sites') renderManagerSites();
     if (pageId === 'page-trade-grid') renderHomeExtras();
+    if (pageId === 'page-notes') renderJobPanels();
 
     // Silent background reconnect attempt on the start and home screens
     if (pageId === 'page-trade-grid' || pageId === 'page-onboarding') {
@@ -53,6 +58,8 @@ document.addEventListener('click', (e) => {
     const target = e.target.closest('[data-go]');
     if (!target) return;
     switchPage(target.getAttribute('data-go'));
+    const seg = target.getAttribute('data-seg-open');
+    if (seg) showSegment(seg);
     const focusId = target.getAttribute('data-focus');
     if (focusId) document.getElementById(focusId)?.focus();
 });
@@ -63,7 +70,8 @@ document.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     switchPage('page-splash');
 
-    initSiteUI({ switchPage, onSiteChanged: applySession });
+    initSiteUI({ switchPage, onSiteChanged: applySession, openPlan });
+    initJobData({ switchPage });
     setupOnboardingListeners();
     setupNotesEngine();
     setupMoreListeners();
@@ -406,6 +414,8 @@ document.querySelectorAll('.trade-tile').forEach(tile => {
                 setupTaskButtons(); 
             } else if (fileTarget.includes('general.html')) {
                 setupGeneralTaskButtons(); 
+            } else if (fileTarget.includes('plumbing.html')) {
+                setupPlumbing();
             }
             
             setupLegalBubbles(); 
@@ -661,6 +671,26 @@ function setupTaskButtons() {
         sbCounterTitle.innerText = `Boxes Generated: ${switchboxRegistry.length}`;
     }
     if (calculateSwitchboxBtn) calculateSwitchboxBtn.onclick = generateWallLayout;
+
+    // --- Add layouts to job data so they can be quoted ---
+    const dlAddQuote = document.getElementById('dl-add-quote');
+    if (dlAddQuote) {
+        dlAddQuote.onclick = () => recordLayout({
+            trade: 'Electrical',
+            item: 'downlight',
+            count: placementRegistry.length,
+            detail: `Room ${widthInput.value} × ${lengthInput.value} m`
+        });
+    }
+    const sbAddQuote = document.getElementById('sb-add-quote');
+    if (sbAddQuote) {
+        sbAddQuote.onclick = () => recordLayout({
+            trade: 'Electrical',
+            item: 'switchbox',
+            count: switchboxRegistry.length,
+            detail: `Wall ${sbWallWidthInput.value} cm at ${sbBoxHeightInput.value} cm high`
+        });
+    }
     
     if (sendSwitchboxBtn) {
         sendSwitchboxBtn.onclick = () => {
@@ -704,7 +734,30 @@ function setupLegalBubbles() {
                 <li><strong>Cubic Volume:</strong> Length $\times$ Width $\times$ Depth. Vital for pouring concrete, mixing mortar, or filling gravel foundations.</li>
                 <li><strong>Circumference:</strong> $2 \times \pi \times R$. Crucial for mapping circular columns, routing custom trim work, or tracking structural round columns.</li>
             </ul>
+        `,
+        plumbing: `
+            <strong>Fixture Rough-in Guidance:</strong>
+            <ul>
+                <li><strong>Heights are typical only:</strong> always confirm against the fixture manufacturer's installation sheet.</li>
+                <li><strong>Standards:</strong> Water services and sanitary plumbing must comply with AS/NZS 3500.</li>
+                <li><strong>Hot water:</strong> Outlets in bathrooms are generally limited to 50&deg;C via a tempering valve.</li>
+            </ul>
+        `,
+        pipefall: `
+            <strong>Drain Grade Guidance:</strong>
+            <ul>
+                <li><strong>Typical minimum grades:</strong> DN65 2.5% (1:40), DN80-DN100 1.65% (1:60), DN125 1.25% (1:80), DN150 1% (1:100).</li>
+                <li><strong>Verify:</strong> Check the current AS/NZS 3500.2 tables and local authority requirements before installing.</li>
+                <li><strong>Fall</strong> = length &times; grade. E.g. 8 m at 1.65% gives 132 mm of fall.</li>
+            </ul>
         `
+    };
+    const legalTitles = {
+        downlight: 'Downlight Placement Codes',
+        switchbox: 'Switchbox Elevation Codes',
+        tape: 'General Layout Code',
+        plumbing: 'Plumbing Fixture Guidance',
+        pipefall: 'Drain Grade Guidance'
     };
 
     if (modalOverlay && closeModalBtn && infoBubbles.length > 0) {
@@ -720,7 +773,7 @@ function setupLegalBubbles() {
                 const contentKey = bubble.getAttribute('data-legal');
                 
                 if (legalDatabase[contentKey]) {
-                    modalTitle.innerText = contentKey === 'downlight' ? 'Downlight Placement Codes' : contentKey === 'switchbox' ? 'Switchbox Elevation Codes' : 'General Layout Code';
+                    modalTitle.innerText = legalTitles[contentKey] || 'Building Code Compliance';
                     modalBody.innerHTML = legalDatabase[contentKey];
                     modalOverlay.classList.remove('hidden');
                 }
@@ -926,6 +979,7 @@ async function readBatteryLevel() {
 function handleBleDisconnect() {
     console.warn("[BLE] Sidekick link dropped.");
     bleCharacteristicCache = null;
+    sidekick.detach();
     setBleStatus('disconnected');
 }
 
@@ -950,6 +1004,7 @@ async function attemptAutoConnect() {
                 const server = await bleDeviceCache.gatt.connect();
                 const service = await server.getPrimaryService(ARDUINO_BLE_SERVICE_UUID);
                 bleCharacteristicCache = await service.getCharacteristic(ARDUINO_BLE_CHAR_UUID);
+                await sidekick.attach(service);
 
                 setBleStatus('connected');
                 console.log("[BLE] Silent auto-reconnect successful!");
@@ -991,6 +1046,7 @@ async function connectToArduino(userInitiated = true) {
 
             console.log("[BLE] Fetching characteristic...");
             bleCharacteristicCache = await service.getCharacteristic(ARDUINO_BLE_CHAR_UUID);
+            await sidekick.attach(service);
         }
 
         setBleStatus('connected');

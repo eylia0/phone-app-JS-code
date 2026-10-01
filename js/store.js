@@ -56,8 +56,21 @@ export const COMPLIANCE_TEMPLATES = {
 // Persistence
 // --------------------------------------------------------------------------
 function emptyDb() {
-    return { users: [], sites: [], members: [], announcements: [], messages: [], documents: [], compliance: [] };
+    return {
+        users: [], sites: [], members: [], announcements: [], messages: [], documents: [], compliance: [],
+        captures: [], planPoints: [], quotes: [], rates: { ...DEFAULT_RATES }
+    };
 }
+
+// Quote rate table (editable in the quote builder, saved per device)
+export const DEFAULT_RATES = {
+    downlight: 85,
+    switchbox: 65,
+    plumbingPoint: 140,
+    perMetre: 4.5,
+    labourHour: 95,
+    callout: 120
+};
 
 let db = loadDb();
 
@@ -465,5 +478,146 @@ export function resubmitCompliance(id, note = '') {
     item.status = 'submitted';
     if (note.trim()) item.note = note.trim();
     item.submittedAt = Date.now();
+    save();
+}
+
+// --------------------------------------------------------------------------
+// Job data workspace: a linked site, or a standalone (standard user) site
+// --------------------------------------------------------------------------
+export function workspaceKey() {
+    const s = getSession();
+    if (s?.siteId) return s.siteId;
+    if (s?.localSite?.name) return `local:${s.localSite.name}`;
+    return null;
+}
+
+function requireWorkspace() {
+    const key = workspaceKey();
+    if (!key) throw new Error('Pick or join a site first.');
+    return key;
+}
+
+// --------------------------------------------------------------------------
+// Captures: measurements / notes / layouts, stamped with time + location
+// type: 'measurement' (valueMm) | 'note' (text) | 'layout' (item, count, detail)
+// source: 'sidekick' | 'simulator' | 'manual' | 'app'
+// --------------------------------------------------------------------------
+export function addCapture(data) {
+    const ws = requireWorkspace();
+    const capture = { id: uid('cap'), ws, userId: getSession()?.userId || null, at: Date.now(), geo: null, ...data };
+    db.captures.push(capture);
+    save();
+    return capture;
+}
+
+export function listCaptures(type) {
+    const ws = workspaceKey();
+    return db.captures
+        .filter(c => c.ws === ws && (!type || c.type === type))
+        .sort((a, b) => b.at - a.at);
+}
+
+export function removeCapture(id) {
+    db.captures = db.captures.filter(c => c.id !== id);
+    save();
+}
+
+// --------------------------------------------------------------------------
+// BIM / plan points. Each plan has numbered points (n) so the Sidekick can
+// refer to them in short BLE messages. A point is stored either as % of the
+// plan image (picked in the app) or as cm (reported by the Sidekick).
+// status: 'planned' -> 'sent' -> 'marked'   |  'from-site' (created on site)
+// --------------------------------------------------------------------------
+export function activePlan() {
+    const ws = workspaceKey();
+    return db.documents
+        .filter(d => d.siteId === ws && d.kind === 'bim')
+        .sort((a, b) => b.createdAt - a.createdAt)[0] || null;
+}
+
+export function setPlanMeta(docId, patch) {
+    const doc = db.documents.find(d => d.id === docId);
+    if (!doc) return;
+    if ('widthM' in patch) doc.planWidthM = patch.widthM > 0 ? patch.widthM : null;
+    if ('aspect' in patch) doc.planAspect = patch.aspect;
+    save();
+}
+
+export function listPlanPoints(docId) {
+    return db.planPoints.filter(p => p.docId === docId).sort((a, b) => a.n - b.n);
+}
+
+export function addPlanPoint(docId, data) {
+    const n = Math.max(0, ...listPlanPoints(docId).map(p => p.n)) + 1;
+    const point = {
+        id: uid('pt'), docId, n, status: 'planned', createdBy: getSession()?.userId || null, createdAt: Date.now(),
+        ...data,
+        label: data.label || `Point ${n}`
+    };
+    db.planPoints.push(point);
+    save();
+    return point;
+}
+
+export function updatePlanPoint(id, patch) {
+    const p = db.planPoints.find(x => x.id === id);
+    if (!p) return null;
+    Object.assign(p, patch);
+    save();
+    return p;
+}
+
+export function removePlanPoint(id) {
+    db.planPoints = db.planPoints.filter(p => p.id !== id);
+    save();
+}
+
+// Sidekick reported "MARK,<n>" for a point on the active plan
+export function markPlanPoint(n, geo) {
+    const plan = activePlan();
+    if (!plan) return null;
+    const point = listPlanPoints(plan.id).find(p => p.n === Number(n));
+    if (!point) return null;
+    return updatePlanPoint(point.id, { status: 'marked', markedAt: Date.now(), markedGeo: geo || null });
+}
+
+// --------------------------------------------------------------------------
+// Quotes + rate table
+// --------------------------------------------------------------------------
+export function getRates() {
+    return { ...DEFAULT_RATES, ...(db.rates || {}) };
+}
+
+export function setRates(rates) {
+    db.rates = { ...getRates(), ...rates };
+    save();
+}
+
+export function listQuotes() {
+    const ws = workspaceKey();
+    return db.quotes.filter(q => q.ws === ws).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function getQuote(id) {
+    return db.quotes.find(q => q.id === id) || null;
+}
+
+export function saveQuote(quote) {
+    const ws = requireWorkspace();
+    const existing = quote.id && db.quotes.find(q => q.id === quote.id);
+    if (existing) {
+        Object.assign(existing, quote, { updatedAt: Date.now() });
+        save();
+        return existing;
+    }
+    const number = `Q-${String(db.quotes.length + 1).padStart(4, '0')}`;
+    const created = { ...quote, id: uid('q'), ws, number, createdBy: getSession()?.userId || null, createdAt: Date.now(), updatedAt: Date.now() };
+    db.quotes.push(created);
+    save();
+    return created;
+}
+
+export function removeQuote(id) {
+    db.quotes = db.quotes.filter(q => q.id !== id);
     save();
 }

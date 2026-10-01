@@ -1,11 +1,116 @@
-<header class="page-header">
-    <button class="icon-btn" data-go="page-trade-grid" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
-    <h1>Plumbing</h1>
-    <span class="icon-btn-spacer"></span>
-</header>
-<p class="muted page-sub">Layouts, points and fixtures.</p>
-<div class="mode-card-list">
-    <button class="btn btn-ghost btn-task" data-cmd="20">Trigger Main Relay 1</button>
-    <button class="btn btn-ghost btn-task" data-cmd="21">Trigger Aux Relay 2</button>
-    <button class="btn btn-ghost btn-task" data-cmd="22">Read Wire Voltage Level</button>
+<!-- PLUMBING HUB -->
+<div id="plumb-hub-menu">
+    <header class="page-header">
+        <button class="icon-btn" data-go="page-trade-grid" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Plumbing</h1>
+        <span class="icon-btn-spacer"></span>
+    </header>
+    <p class="muted page-sub">Layouts, points and fixtures.</p>
+
+    <div class="mode-card-list">
+        <div id="open-setout-btn" class="feature-option-card">
+            <div class="feature-icon-bubble">🚰</div>
+            <div class="feature-meta">
+                <h3>Fixture Set-out <span class="info-bubble" data-legal="plumbing">i</span></h3>
+                <p>Place rough-in points on a wall at typical heights and send them to your Sidekick.</p>
+            </div>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>
+        </div>
+        <div id="open-fall-btn" class="feature-option-card">
+            <div class="feature-icon-bubble">📐</div>
+            <div class="feature-meta">
+                <h3>Pipe Fall Calculator <span class="info-bubble" data-legal="pipefall">i</span></h3>
+                <p>Work out the fall and end height of a drain run from its length and grade.</p>
+            </div>
+            <svg class="chev"><use href="#i-chevron-right"/></svg>
+        </div>
+    </div>
+</div>
+
+<!-- FIXTURE SET-OUT -->
+<div id="plumb-setout-workspace" class="hidden">
+    <header class="page-header">
+        <button id="back-to-plumb-hub-1" class="icon-btn" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Fixture Set-out</h1>
+        <button class="icon-btn info-bubble" data-legal="plumbing" aria-label="Info">i</button>
+    </header>
+
+    <div class="card stack">
+        <div class="dual-input-grid">
+            <div class="form-group">
+                <label>Wall Width</label>
+                <div class="unit-field"><input type="number" id="po-wall-width" value="300" min="50"><span>cm</span></div>
+            </div>
+            <div class="form-group">
+                <label>Distance from left</label>
+                <div class="unit-field"><input type="number" id="po-x" value="60" min="0"><span>cm</span></div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Fixture point</label>
+            <select id="po-fixture"></select>
+        </div>
+        <div class="form-group">
+            <label>Height from floor</label>
+            <div class="unit-field"><input type="number" id="po-height" min="0"><span>mm</span></div>
+        </div>
+        <button id="po-add" class="btn btn-ghost">+ Add Point to Wall</button>
+    </div>
+
+    <h4 id="po-counter" class="section-title">Points: 0</h4>
+    <div class="blueprint-canvas-wrapper">
+        <div id="po-wall-canvas" class="wall-canvas"></div>
+    </div>
+    <span class="subtle-hint">Typical heights only. Always check fixture specs and AS/NZS 3500. Tap a point to remove it.</span>
+    <div id="po-list" class="settings-list"></div>
+
+    <button id="po-send" class="btn btn-primary">Send Points to Sidekick <svg><use href="#i-chevron-right"/></svg></button>
+    <button id="po-quote" class="btn btn-ghost">Add to Quote</button>
+</div>
+
+<!-- PIPE FALL CALCULATOR -->
+<div id="plumb-fall-workspace" class="hidden">
+    <header class="page-header">
+        <button id="back-to-plumb-hub-2" class="icon-btn" aria-label="Back"><svg><use href="#i-chevron-left"/></svg></button>
+        <h1>Pipe Fall</h1>
+        <button class="icon-btn info-bubble" data-legal="pipefall" aria-label="Info">i</button>
+    </header>
+
+    <div class="card stack">
+        <div class="dual-input-grid">
+            <div class="form-group">
+                <label>Run Length</label>
+                <div class="unit-field"><input type="number" id="pf-length" value="8" min="0" step="0.1"><span>m</span></div>
+            </div>
+            <div class="form-group">
+                <label>Pipe Size</label>
+                <select id="pf-size">
+                    <option value="2.5">DN65 (min 1:40)</option>
+                    <option value="1.65">DN80 (min 1:60)</option>
+                    <option value="1.65" selected>DN100 (min 1:60)</option>
+                    <option value="1.25">DN125 (min 1:80)</option>
+                    <option value="1">DN150 (min 1:100)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Grade</label>
+                <div class="unit-field"><input type="number" id="pf-grade" value="1.65" min="0.1" step="0.05"><span>%</span></div>
+            </div>
+            <div class="form-group">
+                <label>Start Invert</label>
+                <div class="unit-field"><input type="number" id="pf-start" value="600" step="1"><span>mm</span></div>
+            </div>
+        </div>
+        <span class="subtle-hint">Start invert is the depth of the pipe base below your datum at the top of the run.</span>
+    </div>
+
+    <div class="card">
+        <table class="result-table">
+            <tr><td>Grade ratio</td><td id="pf-out-ratio">-</td></tr>
+            <tr><td>Total fall</td><td id="pf-out-fall">-</td></tr>
+            <tr><td>End invert (depth)</td><td id="pf-out-end">-</td></tr>
+            <tr><td>Fall per metre</td><td id="pf-out-per-m">-</td></tr>
+        </table>
+        <p id="pf-warning" class="warn-text hidden"></p>
+    </div>
 </div>

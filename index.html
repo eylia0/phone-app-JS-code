@@ -270,7 +270,7 @@
                     </button>
                 </div>
 
-                <button class="action-card primary compact" data-go="page-notes" data-focus="site-notes-input">
+                <button class="action-card primary compact" data-go="page-notes" data-seg-open="seg-notes" data-focus="site-notes-input">
                     <svg class="action-icon"><use href="#i-file-plus"/></svg>
                     <span class="action-text">
                         <strong>Add Note</strong>
@@ -288,13 +288,23 @@
                 </header>
                 <p class="muted notes-site-label" id="notes-site-label"></p>
 
-                <div class="card servicenow-composer">
-                    <textarea id="site-notes-input" placeholder="Add a work note..." rows="3"></textarea>
-                    <button id="btn-save-notes" class="btn btn-primary">Post Note</button>
+                <div class="segmented" id="notes-tabs">
+                    <button class="active" data-seg="seg-notes">Notes</button>
+                    <button data-seg="seg-captures">Sidekick</button>
+                    <button data-seg="seg-quotes">Quotes</button>
                 </div>
 
-                <h4 class="section-title">Activity</h4>
-                <div id="activity-stream-list" class="activity-stream"></div>
+                <div id="seg-notes" class="seg-panel step-stack">
+                    <div class="card servicenow-composer">
+                        <textarea id="site-notes-input" placeholder="Add a work note..." rows="3"></textarea>
+                        <button id="btn-save-notes" class="btn btn-primary">Post Note</button>
+                    </div>
+
+                    <h4 class="section-title">Activity</h4>
+                    <div id="activity-stream-list" class="activity-stream"></div>
+                </div>
+                <div id="seg-captures" class="seg-panel step-stack hidden"></div>
+                <div id="seg-quotes" class="seg-panel step-stack hidden"></div>
             </section>
 
             <!-- SITE TAB -->
@@ -378,6 +388,9 @@
             <button class="nav-item" data-go="page-notes"><svg><use href="#i-notes"/></svg><span>Notes</span></button>
             <button class="nav-item" data-go="page-more"><svg><use href="#i-user"/></svg><span>More</span></button>
         </nav>
+
+        <!-- TOAST (incoming Sidekick data etc.) -->
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
         <!-- LEGAL COMPLIANCE OVERLAY MODAL -->
         <div id="legal-modal-overlay" class="modal-overlay hidden">

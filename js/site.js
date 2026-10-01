@@ -6,6 +6,7 @@ import * as store from './store.js';
 
 let nav = { switchPage: () => {}, onSiteChanged: () => {} };
 let subBack = null;
+let liveRerender = null;
 
 export function initSiteUI(navApi) {
     nav = { ...nav, ...navApi };
@@ -58,13 +59,20 @@ function roleTag(member) {
         : `<span class="tag">${esc(store.getUser(member?.userId)?.trade || 'Worker')}</span>`;
 }
 
-function openSub(title, render, back = openSiteHub) {
+// live: re-render automatically when new Sidekick data arrives (see refreshLiveSub)
+export function openSub(title, render, back = openSiteHub, { live = false } = {}) {
     document.getElementById('sub-title').innerText = title;
     subBack = back;
     const body = document.getElementById('sub-body');
     const rerender = () => { body.innerHTML = ''; render(body, rerender); };
+    liveRerender = live ? rerender : null;
     rerender();
     nav.switchPage('page-sub');
+}
+
+export function refreshLiveSub() {
+    const page = document.getElementById('page-sub');
+    if (liveRerender && page && !page.classList.contains('hidden')) liveRerender();
 }
 
 export async function shareCode(site) {
@@ -313,7 +321,7 @@ function openPermissions(userId) {
 // --------------------------------------------------------------------------
 // DOCUMENTS & BIM
 // --------------------------------------------------------------------------
-function openDocuments() {
+export function openDocuments() {
     openSub('Documents & BIM', (body, rerender) => {
         const site = store.currentSite();
         const me = store.getSession().userId;
@@ -340,7 +348,9 @@ function openDocuments() {
                 ${bim ? `
                     ${bim.dataUrl && bim.type?.startsWith('image/') ? `<img class="bim-preview" src="${bim.dataUrl}" alt="Site plan">` : `<div class="bim-placeholder">📐 ${esc(bim.name)}</div>`}
                     <p class="muted">${esc(bim.name)} · ${formatSize(bim.size)} · uploaded ${timeAgo(bim.createdAt)}</p>
-                    <p class="subtle-hint">Picking points on the plan and sending them to the Sidekick comes in Phase 3.</p>
+                    ${bim.dataUrl && bim.type?.startsWith('image/')
+                        ? '<button class="btn btn-primary" data-pick-points>Pick Points on Plan</button>'
+                        : '<p class="subtle-hint">Point picking works on image plans (PNG/JPG). Export a plan view from your BIM tool to use it.</p>'}
                     <div class="btn-row">
                         <button class="btn btn-ghost" data-open="${bim.id}">Open</button>
                         ${canUpload ? '<button class="btn btn-ghost" data-upload="bim">Replace</button>' : ''}
@@ -376,6 +386,7 @@ function openDocuments() {
                 rerender();
             } catch (err) { showError(err); }
         };
+        body.querySelector('[data-pick-points]')?.addEventListener('click', () => nav.openPlan?.(openDocuments));
         const all = [...docs, ...(bim ? [bim] : [])];
         body.querySelectorAll('[data-open]').forEach(b => b.onclick = () => openDocument(all.find(d => d.id === b.getAttribute('data-open'))));
         body.querySelectorAll('[data-remove]').forEach(b => b.onclick = () => {
